@@ -1,26 +1,69 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const HomeScreen = () => {
+const HomeScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>MediCudado</Text>
-        <Text style={styles.subtitle}>Seu assistente de medicamentos</Text>
+        <Text style={styles.subtitle}>Controle de Medicamentos</Text>
       </View>
 
-      <View style={styles.cardContainer}>
-        <TouchableOpacity style={styles.card}>
-          <Text style={styles.cardTitle}>Medicamentos</Text>
-          <Text style={styles.cardDescription}>Gerencie seus medicamentos</Text>
-        </TouchableOpacity>
+      <ScrollView style={styles.content}>
+        <View style={styles.menuGrid}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Medicamentos')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#4CAF50' }]} />
+            <Text style={styles.menuTitle}>Medicamentos</Text>
+            <Text style={styles.menuDescription}>Gerenciar medicamentos</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity style={styles.card}>
-          <Text style={styles.cardTitle}>Alarmes</Text>
-          <Text style={styles.cardDescription}>Configure seus lembretes</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Alarmes')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#2196F3' }]} />
+            <Text style={styles.menuTitle}>Alarmes</Text>
+            <Text style={styles.menuDescription}>Controlar lembretes</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Historico')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#9C27B0' }]} />
+            <Text style={styles.menuTitle}>Histórico</Text>
+            <Text style={styles.menuDescription}>Medicamentos tomados</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Estoque')}
+          >
+            <View style={[styles.menuIcon, { backgroundColor: '#FF9800' }]} />
+            <Text style={styles.menuTitle}>Estoque</Text>
+            <Text style={styles.menuDescription}>Controle de estoque</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.settingsSection}>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => navigation.navigate('Configuracoes')}
+          >
+            <Text style={styles.settingsButtonText}>Configurações</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -35,7 +78,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     color: '#fff',
   },
@@ -44,15 +87,56 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginTop: 5,
   },
-  cardContainer: {
-    padding: 20,
-    gap: 15,
+  content: {
+    flex: 1,
+    padding: 16,
   },
-  card: {
+  menuGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  menuItem: {
+    width: '47%',
     backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 10,
-    elevation: 3,
+    borderRadius: 12,
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    marginBottom: 16,
+  },
+  menuIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginBottom: 12,
+  },
+  menuTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  menuDescription: {
+    fontSize: 14,
+    color: '#666',
+  },
+  settingsSection: {
+    marginTop: 16,
+  },
+  settingsButton: {
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -61,15 +145,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  settingsButtonText: {
+    fontSize: 16,
     color: '#333',
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
+    fontWeight: 'bold',
   },
 });
 

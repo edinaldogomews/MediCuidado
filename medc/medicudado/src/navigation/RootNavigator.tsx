@@ -8,6 +8,8 @@ import AppNavigator from './AppNavigator';
 import CuidadoHomeScreen from '../screens/cuidado/CuidadoHomeScreen';
 import SecuritySettingsScreen from '../screens/settings/SecuritySettingsScreen';
 import LoadingScreen from '../screens/common/LoadingScreen';
+import ConfigurarPinScreen from '../screens/configuracoes/ConfigurarPinScreen';
+import AjudaScreen from '../screens/ajuda/AjudaScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -53,6 +55,31 @@ const RootNavigator = () => {
           // Fluxo do idoso - Acesso limitado
           <Stack.Screen name="CuidadoHome" component={CuidadoHomeScreen} />
         )}
+        <Stack.Screen
+          name="ConfigurarPin"
+          component={ConfigurarPinScreen}
+          options={{
+            headerShown: true,
+            headerTitle: 'Configurar PIN',
+            headerStyle: {
+              backgroundColor: '#4CAF50',
+            },
+            headerTintColor: '#fff',
+            presentation: 'modal'
+          }}
+        />
+        <Stack.Screen
+          name="Ajuda"
+          component={AjudaScreen}
+          options={{
+            headerShown: true,
+            headerTitle: 'Ajuda e Suporte',
+            headerStyle: {
+              backgroundColor: '#4CAF50',
+            },
+            headerTintColor: '#fff',
+          }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

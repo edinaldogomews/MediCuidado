@@ -1,4 +1,4 @@
-ntimport React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,16 +6,18 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  Alert
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StorageService } from '../../services/StorageService';
+import { useSecurity } from '../../contexts/SecurityContext';
 import { Medicamento } from '../../types';
 
 const EstoqueScreen = () => {
   const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [novaQuantidade, setNovaQuantidade] = useState('');
+  const { requirePin } = useSecurity();
 
   useEffect(() => {
     carregarMedicamentos();
@@ -26,7 +28,15 @@ const EstoqueScreen = () => {
     setMedicamentos(data);
   };
 
-  const atualizarEstoque = async (medicamento: Medicamento) => {
+  const handleIniciarEdicao = async (medicamento: Medicamento) => {
+    const canProceed = await requirePin('atualizar estoque');
+    if (canProceed) {
+      setEditandoId(medicamento.id);
+      setNovaQuantidade(medicamento.estoque.quantidade.toString());
+    }
+  };
+
+  const handleSalvarEstoque = async (medicamento: Medicamento) => {
     try {
       const quantidade = Number(novaQuantidade);
       if (isNaN(quantidade) || quantidade < 0) {
@@ -56,15 +66,10 @@ const EstoqueScreen = () => {
     }
   };
 
-  const verificarEstoqueBaixo = (medicamento: Medicamento) => {
-    const { quantidade, alertaQuandoAbaixoDe } = medicamento.estoque;
-    return alertaQuandoAbaixoDe !== undefined && quantidade <= alertaQuandoAbaixoDe;
-  };
-
   const renderItem = ({ item }: { item: Medicamento }) => (
     <View style={[
       styles.estoqueCard,
-      verificarEstoqueBaixo(item) && styles.estoqueBaixo
+      item.estoque.quantidade <= (item.estoque.alertaQuandoAbaixoDe || 0) && styles.estoqueBaixo
     ]}>
       <View style={styles.medicamentoInfo}>
         <Text style={styles.medicamentoNome}>{item.nome}</Text>
@@ -73,7 +78,7 @@ const EstoqueScreen = () => {
           <Text style={styles.estoqueTexto}>
             Estoque: {item.estoque.quantidade} {item.estoque.unidade}
           </Text>
-          {verificarEstoqueBaixo(item) && (
+          {item.estoque.quantidade <= (item.estoque.alertaQuandoAbaixoDe || 0) && (
             <Text style={styles.alertaEstoque}>Estoque Baixo!</Text>
           )}
         </View>
@@ -90,7 +95,7 @@ const EstoqueScreen = () => {
           />
           <TouchableOpacity
             style={styles.botaoSalvar}
-            onPress={() => atualizarEstoque(item)}
+            onPress={() => handleSalvarEstoque(item)}
           >
             <Text style={styles.botaoTexto}>Salvar</Text>
           </TouchableOpacity>
@@ -98,10 +103,7 @@ const EstoqueScreen = () => {
       ) : (
         <TouchableOpacity
           style={styles.botaoAtualizar}
-          onPress={() => {
-            setEditandoId(item.id);
-            setNovaQuantidade(item.estoque.quantidade.toString());
-          }}
+          onPress={() => handleIniciarEdicao(item)}
         >
           <Text style={styles.botaoTexto}>Atualizar</Text>
         </TouchableOpacity>

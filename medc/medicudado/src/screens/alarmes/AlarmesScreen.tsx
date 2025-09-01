@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import NotificationService from '../../services/NotificationService';
 import { StorageService } from '../../services/StorageService';
+import { useSecurity } from '../../contexts/SecurityContext';
 import { Alarme, Medicamento } from '../../types';
 
 const AlarmesScreen = () => {
   const [alarmes, setAlarmes] = useState<(Alarme & { medicamento?: Medicamento })[]>([]);
+  const { requirePin } = useSecurity();
 
   useEffect(() => {
     carregarAlarmes();
@@ -26,9 +28,21 @@ const AlarmesScreen = () => {
     setAlarmes(alarmesComMedicamentos);
   };
 
+  const handleEditarHorario = async (alarmeId: string) => {
+    const canProceed = await requirePin('modificar horário do alarme');
+    if (canProceed) {
+      navigation.navigate('EditarHorarioAlarme', { alarmeId });
+    }
+  };
+
   const marcarComoTomado = async (alarmeId: string) => {
-    await NotificationService.marcarAlarmeTomado(alarmeId);
-    carregarAlarmes();
+    // Não precisa de PIN para marcar como tomado
+    try {
+      await NotificationService.marcarAlarmeTomado(alarmeId);
+      carregarAlarmes();
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível atualizar o alarme');
+    }
   };
 
   const renderAlarme = ({ item }: { item: Alarme & { medicamento?: Medicamento } }) => (
@@ -46,14 +60,25 @@ const AlarmesScreen = () => {
         </Text>
       </View>
 
-      {item.status === 'pendente' && (
-        <TouchableOpacity
-          style={styles.botaoTomado}
-          onPress={() => marcarComoTomado(item.id)}
-        >
-          <Text style={styles.botaoTomadoTexto}>Marcar como tomado</Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.botoesContainer}>
+        {item.status === 'pendente' && (
+          <>
+            <TouchableOpacity
+              style={styles.botaoTomado}
+              onPress={() => marcarComoTomado(item.id)}
+            >
+              <Text style={styles.botaoTomadoTexto}>Marcar como tomado</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.botaoEditar}
+              onPress={() => handleEditarHorario(item.id)}
+            >
+              <Text style={styles.botaoEditarTexto}>Editar Horário</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </View>
     </View>
   );
 
@@ -130,13 +155,31 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
   },
+  botoesContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
   botaoTomado: {
     backgroundColor: '#4CAF50',
     padding: 10,
     borderRadius: 6,
     alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
   },
   botaoTomadoTexto: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  botaoEditar: {
+    backgroundColor: '#007BFF',
+    padding: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+    flex: 1,
+  },
+  botaoEditarTexto: {
     color: '#fff',
     fontWeight: 'bold',
   },
