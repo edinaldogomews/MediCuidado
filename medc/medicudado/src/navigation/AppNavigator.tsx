@@ -9,6 +9,7 @@ import AddMedicamentoScreen from '../screens/medicamentos/AddMedicamentoScreen';
 import AlarmesScreen from '../screens/alarmes/AlarmesScreen';
 import HistoricoScreen from '../screens/historico/HistoricoScreen';
 import EstoqueScreen from '../screens/estoque/EstoqueScreen';
+import NotificacoesScreen from '../screens/notificacoes/NotificacoesScreen';
 import PerfilScreen from '../screens/perfil/PerfilScreen';
 
 const Tab = createBottomTabNavigator();
@@ -27,6 +28,29 @@ const MedicamentosStack = () => {
         component={AddMedicamentoScreen}
         options={{
           headerTitle: 'Novo Medicamento',
+          headerStyle: {
+            backgroundColor: '#4CAF50',
+          },
+          headerTintColor: '#fff',
+        }}
+      />
+    </Stack.Navigator>
+  );
+};
+
+const PerfilStack = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="PerfilMain"
+        component={PerfilScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Notificacoes"
+        component={NotificacoesScreen}
+        options={{
+          headerTitle: 'Configurar Notificações',
           headerStyle: {
             backgroundColor: '#4CAF50',
           },
@@ -69,7 +93,7 @@ const AppNavigator = () => {
         />
         <Tab.Screen
           name="Perfil"
-          component={PerfilScreen}
+          component={PerfilStack}
         />
       </Tab.Navigator>
     </NavigationContainer>

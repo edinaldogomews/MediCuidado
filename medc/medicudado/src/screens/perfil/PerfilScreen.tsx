@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StorageService } from '../../services/StorageService';
 import { Perfil, PerfilIdoso, PerfilCuidador } from '../../types';
 
-const PerfilScreen = () => {
+const PerfilScreen = ({ navigation }) => {
   const [tipoPerfil, setTipoPerfil] = useState<'idoso' | 'cuidador'>('idoso');
   const [nome, setNome] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
@@ -186,6 +186,17 @@ const PerfilScreen = () => {
           </View>
         )}
 
+        <View style={styles.menuSection}>
+          <Text style={styles.menuTitle}>Configurações</Text>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Notificacoes')}
+          >
+            <Text style={styles.menuItemText}>Configurar Notificações</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity style={styles.button} onPress={salvarPerfil}>
           <Text style={styles.buttonText}>Salvar Perfil</Text>
         </TouchableOpacity>
@@ -264,6 +275,28 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  menuSection: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  menuTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+  },
+  menuItem: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+  },
+  menuItemText: {
+    fontSize: 16,
+    color: '#333',
   },
 });
 
