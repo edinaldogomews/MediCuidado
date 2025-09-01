@@ -1,118 +1,76 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StorageService } from '../services/StorageService';
 
-// Defina o tipo para as informações do usuário
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-};
+interface AuthContextData {
+  userType: 'idoso' | 'cuidador' | null;
+  isLoading: boolean;
+  setUserType: (type: 'idoso' | 'cuidador') => Promise<void>;
+  clearUserType: () => Promise<void>;
+  canEdit: boolean;
+}
 
-// Defina o tipo para o contexto de autenticação
-type AuthContextType = {
-  isAuthenticated: boolean;
-  user: User | null;
-  loading: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
-  logout: () => Promise<void>;
-};
+const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
-// Crie o contexto de autenticação
-const AuthContext = createContext<AuthContextType>({
-  isAuthenticated: false,
-  user: null,
-  loading: true,
-  login: async () => false,
-  logout: async () => {},
-});
+export const AuthProvider: React.FC = ({ children }) => {
+  const [userType, setUserTypeState] = useState<'idoso' | 'cuidador' | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-// Hook personalizado para usar o contexto de autenticação
-export const useAuth = () => useContext(AuthContext);
-
-// Provedor de autenticação
-const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Verifique o estado de autenticação ao carregar o componente
   useEffect(() => {
-    const checkAuthState = async () => {
-      try {
-        const userJson = await AsyncStorage.getItem('@medicudado:user');
-        const token = await AsyncStorage.getItem('@medicudado:token');
-
-        if (userJson && token) {
-          setUser(JSON.parse(userJson));
-          setIsAuthenticated(true);
-        }
-      } catch (error) {
-        console.error('Erro ao verificar estado de autenticação', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAuthState();
+    loadStoredUserType();
   }, []);
 
-  // Função de login
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const loadStoredUserType = async () => {
     try {
-      setLoading(true);
-
-      // Em uma implementação real, você faria uma chamada de API aqui
-      // Simulando uma chamada de API bem-sucedida para fins de demonstração
-      if (username === 'usuario' && password === 'senha') {
-        const mockUser: User = {
-          id: '1',
-          name: 'Usuário MediCudado',
-          email: 'usuario@medicudado.com.br',
-          role: 'medico',
-        };
-
-        // Armazene os dados do usuário e o token
-        await AsyncStorage.setItem('@medicudado:user', JSON.stringify(mockUser));
-        await AsyncStorage.setItem('@medicudado:token', 'mock-token-12345');
-
-        setUser(mockUser);
-        setIsAuthenticated(true);
-        return true;
-      }
-
-      return false;
+      const storedType = await StorageService.getUserType();
+      setUserTypeState(storedType);
     } catch (error) {
-      console.error('Erro ao fazer login', error);
-      return false;
+      console.error('Erro ao carregar tipo de usuário:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  // Função de logout
-  const logout = async (): Promise<void> => {
+  const setUserType = async (type: 'idoso' | 'cuidador') => {
     try {
-      setLoading(true);
-
-      // Remova os dados do usuário e o token
-      await AsyncStorage.removeItem('@medicudado:user');
-      await AsyncStorage.removeItem('@medicudado:token');
-
-      setUser(null);
-      setIsAuthenticated(false);
+      await StorageService.setUserType(type);
+      setUserTypeState(type);
     } catch (error) {
-      console.error('Erro ao fazer logout', error);
-    } finally {
-      setLoading(false);
+      console.error('Erro ao definir tipo de usuário:', error);
+      throw error;
+    }
+  };
+
+  const clearUserType = async () => {
+    try {
+      await StorageService.clearUserType();
+      setUserTypeState(null);
+    } catch (error) {
+      console.error('Erro ao limpar tipo de usuário:', error);
+      throw error;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, loading, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        userType,
+        isLoading,
+        setUserType,
+        clearUserType,
+        canEdit: userType === 'cuidador',
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export default AuthProvider;
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
+  }
+
+  return context;
+};
