@@ -6,6 +6,7 @@ const ALARMES_KEY = '@medicudado:alarmes';
 const PERFIS_KEY = '@medicudado:perfis';
 const PERFIL_ATIVO_KEY = '@medicudado:perfilAtivo';
 const USER_TYPE_KEY = '@medicudado:userType';
+const PIN_PROTECTION_KEY = '@medicudado:pinProtection';
 
 export const StorageService = {
   async saveMedicamento(medicamento: Medicamento): Promise<void> {
@@ -164,5 +165,32 @@ export const StorageService = {
       console.error('Erro ao limpar tipo de usuário:', error);
       throw error;
     }
+  },
+
+  async setPinProtection(pin: string | null): Promise<void> {
+    try {
+      if (pin) {
+        await AsyncStorage.setItem(PIN_PROTECTION_KEY, pin);
+      } else {
+        await AsyncStorage.removeItem(PIN_PROTECTION_KEY);
+      }
+    } catch (error) {
+      console.error('Erro ao configurar proteção por PIN:', error);
+      throw error;
+    }
+  },
+
+  async getPin(): Promise<string | null> {
+    try {
+      return await AsyncStorage.getItem(PIN_PROTECTION_KEY);
+    } catch (error) {
+      console.error('Erro ao buscar PIN:', error);
+      return null;
+    }
+  },
+
+  async hasPinProtection(): Promise<boolean> {
+    const pin = await this.getPin();
+    return pin !== null;
   }
 };

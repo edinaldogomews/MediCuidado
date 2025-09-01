@@ -195,6 +195,13 @@ const PerfilScreen = ({ navigation }) => {
           >
             <Text style={styles.menuItemText}>Configurar Notificações</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuItem, styles.menuItemSecurity]}
+            onPress={() => navigation.navigate('SecuritySettings')}
+          >
+            <Text style={styles.menuItemText}>Configurações de Segurança</Text>
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.button} onPress={salvarPerfil}>
@@ -293,6 +300,10 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     backgroundColor: '#f5f5f5',
+  },
+  menuItemSecurity: {
+    marginTop: 10,
+    backgroundColor: '#e8f5e9',
   },
   menuItemText: {
     fontSize: 16,
