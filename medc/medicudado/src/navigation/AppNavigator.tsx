@@ -8,6 +8,7 @@ import MedicamentosScreen from '../screens/medicamentos/MedicamentosScreen';
 import AddMedicamentoScreen from '../screens/medicamentos/AddMedicamentoScreen';
 import AlarmesScreen from '../screens/alarmes/AlarmesScreen';
 import HistoricoScreen from '../screens/historico/HistoricoScreen';
+import EstoqueScreen from '../screens/estoque/EstoqueScreen';
 import PerfilScreen from '../screens/perfil/PerfilScreen';
 
 const Tab = createBottomTabNavigator();
@@ -61,6 +62,10 @@ const AppNavigator = () => {
         <Tab.Screen
           name="Histórico"
           component={HistoricoScreen}
+        />
+        <Tab.Screen
+          name="Estoque"
+          component={EstoqueScreen}
         />
         <Tab.Screen
           name="Perfil"

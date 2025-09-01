@@ -17,9 +17,12 @@ const AddMedicamentoScreen = ({ navigation }) => {
   const [dosagem, setDosagem] = useState('');
   const [horario, setHorario] = useState('');
   const [instrucoes, setInstrucoes] = useState('');
+  const [quantidade, setQuantidade] = useState('');
+  const [unidade, setUnidade] = useState('');
+  const [alertaEstoque, setAlertaEstoque] = useState('');
 
   const handleSalvar = async () => {
-    if (!nome || !dosagem || !horario) {
+    if (!nome || !dosagem || !horario || !quantidade || !unidade) {
       Alert.alert('Erro', 'Por favor preencha todos os campos obrigatórios');
       return;
     }
@@ -35,6 +38,11 @@ const AddMedicamentoScreen = ({ navigation }) => {
       },
       frequencia: {
         tipo: 'diaria',
+      },
+      estoque: {
+        quantidade: Number(quantidade),
+        unidade,
+        alertaQuandoAbaixoDe: alertaEstoque ? Number(alertaEstoque) : undefined,
       }
     };
 
@@ -80,6 +88,38 @@ const AddMedicamentoScreen = ({ navigation }) => {
             value={horario}
             onChangeText={setHorario}
             placeholder="Ex: 08:00"
+            keyboardType="numeric"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Quantidade em Estoque *</Text>
+          <TextInput
+            style={styles.input}
+            value={quantidade}
+            onChangeText={setQuantidade}
+            placeholder="Ex: 30"
+            keyboardType="numeric"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Unidade *</Text>
+          <TextInput
+            style={styles.input}
+            value={unidade}
+            onChangeText={setUnidade}
+            placeholder="Ex: comprimidos"
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Alerta quando estoque abaixo de</Text>
+          <TextInput
+            style={styles.input}
+            value={alertaEstoque}
+            onChangeText={setAlertaEstoque}
+            placeholder="Ex: 5"
             keyboardType="numeric"
           />
         </View>

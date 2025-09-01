@@ -13,9 +13,10 @@ export interface Medicamento {
     dias?: number[]; // dias da semana (0-6) para frequência semanal
     intervalo?: number; // intervalo em horas para frequência específica
   };
-  estoque?: {
+  estoque: {
     quantidade: number;
     unidade: string;
+    alertaQuandoAbaixoDe?: number;
   };
 }
 

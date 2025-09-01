@@ -59,5 +59,29 @@ export const StorageService = {
       console.error('Erro ao atualizar status do medicamento:', error);
       throw error;
     }
+  },
+
+  async atualizarMedicamentos(medicamentos: Medicamento[]): Promise<void> {
+    try {
+      await AsyncStorage.setItem(MEDICAMENTOS_KEY, JSON.stringify(medicamentos));
+    } catch (error) {
+      console.error('Erro ao atualizar medicamentos:', error);
+      throw error;
+    }
+  },
+
+  async atualizarEstoque(medicamentoId: string, novaQuantidade: number): Promise<void> {
+    try {
+      const medicamentos = await this.getMedicamentos();
+      const index = medicamentos.findIndex(m => m.id === medicamentoId);
+
+      if (index !== -1) {
+        medicamentos[index].estoque.quantidade = novaQuantidade;
+        await this.atualizarMedicamentos(medicamentos);
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar estoque:', error);
+      throw error;
+    }
   }
 };
