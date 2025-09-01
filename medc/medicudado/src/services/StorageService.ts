@@ -5,6 +5,7 @@ const MEDICAMENTOS_KEY = '@medicudado:medicamentos';
 const ALARMES_KEY = '@medicudado:alarmes';
 const PERFIS_KEY = '@medicudado:perfis';
 const PERFIL_ATIVO_KEY = '@medicudado:perfilAtivo';
+const USER_TYPE_KEY = '@medicudado:userType';
 
 export const StorageService = {
   async saveMedicamento(medicamento: Medicamento): Promise<void> {
@@ -133,6 +134,34 @@ export const StorageService = {
       await AsyncStorage.setItem(PERFIL_ATIVO_KEY, perfilId);
     } catch (error) {
       console.error('Erro ao definir perfil ativo:', error);
+      throw error;
+    }
+  },
+
+  async getUserType(): Promise<'idoso' | 'cuidador' | null> {
+    try {
+      const type = await AsyncStorage.getItem(USER_TYPE_KEY);
+      return type as 'idoso' | 'cuidador' | null;
+    } catch (error) {
+      console.error('Erro ao buscar tipo de usuário:', error);
+      return null;
+    }
+  },
+
+  async setUserType(type: 'idoso' | 'cuidador'): Promise<void> {
+    try {
+      await AsyncStorage.setItem(USER_TYPE_KEY, type);
+    } catch (error) {
+      console.error('Erro ao salvar tipo de usuário:', error);
+      throw error;
+    }
+  },
+
+  async clearUserType(): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(USER_TYPE_KEY);
+    } catch (error) {
+      console.error('Erro ao limpar tipo de usuário:', error);
       throw error;
     }
   }

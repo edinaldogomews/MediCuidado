@@ -1,41 +1,76 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { StorageService } from '../services/StorageService';
 
 interface AuthContextData {
-  signed: boolean;
-  user: object | null;
-  signIn(): Promise<void>;
-  signOut(): void;
+  userType: 'idoso' | 'cuidador' | null;
+  isLoading: boolean;
+  setUserType: (type: 'idoso' | 'cuidador') => Promise<void>;
+  clearUserType: () => Promise<void>;
+  canEdit: boolean;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
 
 export const AuthProvider: React.FC = ({ children }) => {
-  const [user, setUser] = useState<object | null>(null);
+  const [userType, setUserTypeState] = useState<'idoso' | 'cuidador' | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  async function signIn() {
-    // Implementação básica de login
-    setUser({ id: 1, name: 'Usuário' });
-  }
+  useEffect(() => {
+    loadStoredUserType();
+  }, []);
 
-  function signOut() {
-    setUser(null);
-  }
+  const loadStoredUserType = async () => {
+    try {
+      const storedType = await StorageService.getUserType();
+      setUserTypeState(storedType);
+    } catch (error) {
+      console.error('Erro ao carregar tipo de usuário:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const setUserType = async (type: 'idoso' | 'cuidador') => {
+    try {
+      await StorageService.setUserType(type);
+      setUserTypeState(type);
+    } catch (error) {
+      console.error('Erro ao definir tipo de usuário:', error);
+      throw error;
+    }
+  };
+
+  const clearUserType = async () => {
+    try {
+      await StorageService.clearUserType();
+      setUserTypeState(null);
+    } catch (error) {
+      console.error('Erro ao limpar tipo de usuário:', error);
+      throw error;
+    }
+  };
 
   return (
     <AuthContext.Provider
-      value={{ signed: !!user, user, signIn, signOut }}
+      value={{
+        userType,
+        isLoading,
+        setUserType,
+        clearUserType,
+        canEdit: userType === 'cuidador',
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
 
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth deve ser usado dentro de um AuthProvider');
   }
 
   return context;
-}
+};
