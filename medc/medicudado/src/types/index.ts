@@ -1,29 +1,24 @@
-export interface Medicamento {
+export interface Perfil {
   id: string;
+  tipo: 'idoso' | 'cuidador';
   nome: string;
-  dosagem: string;
-  horarios: string[];
-  instrucoes: string;
-  duracao: {
-    inicio: string;
-    fim?: string;
-  };
-  frequencia: {
-    tipo: 'diaria' | 'semanal' | 'especifica';
-    dias?: number[]; // dias da semana (0-6) para frequência semanal
-    intervalo?: number; // intervalo em horas para frequência específica
-  };
-  estoque: {
-    quantidade: number;
-    unidade: string;
-    alertaQuandoAbaixoDe?: number;
-  };
+  dataNascimento?: string;
+  telefone?: string;
+  endereco?: string;
+  foto?: string;
 }
 
-export interface Alarme {
-  id: string;
-  medicamentoId: string;
-  horario: string;
-  status: 'pendente' | 'tomado' | 'ignorado';
-  data: string;
+export interface PerfilIdoso extends Perfil {
+  tipo: 'idoso';
+  condicoesMedicas?: string[];
+  alergias?: string[];
+  cuidadorId?: string;
 }
+
+export interface PerfilCuidador extends Perfil {
+  tipo: 'cuidador';
+  relacao: string; // filho, cônjuge, etc
+  idososVinculados: string[]; // IDs dos idosos
+}
+
+// ...existing code...

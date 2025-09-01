@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Medicamento, Alarme } from '../types';
+import { Medicamento, Alarme, Perfil, PerfilIdoso, PerfilCuidador } from '../types';
 
 const MEDICAMENTOS_KEY = '@medicudado:medicamentos';
 const ALARMES_KEY = '@medicudado:alarmes';
+const PERFIS_KEY = '@medicudado:perfis';
+const PERFIL_ATIVO_KEY = '@medicudado:perfilAtivo';
 
 export const StorageService = {
   async saveMedicamento(medicamento: Medicamento): Promise<void> {
@@ -81,6 +83,56 @@ export const StorageService = {
       }
     } catch (error) {
       console.error('Erro ao atualizar estoque:', error);
+      throw error;
+    }
+  },
+
+  async salvarPerfil(perfil: Perfil): Promise<void> {
+    try {
+      const perfis = await this.getPerfis();
+      const index = perfis.findIndex(p => p.id === perfil.id);
+
+      if (index !== -1) {
+        perfis[index] = perfil;
+      } else {
+        perfis.push(perfil);
+      }
+
+      await AsyncStorage.setItem(PERFIS_KEY, JSON.stringify(perfis));
+    } catch (error) {
+      console.error('Erro ao salvar perfil:', error);
+      throw error;
+    }
+  },
+
+  async getPerfis(): Promise<Perfil[]> {
+    try {
+      const data = await AsyncStorage.getItem(PERFIS_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Erro ao buscar perfis:', error);
+      return [];
+    }
+  },
+
+  async getPerfilAtivo(): Promise<Perfil | null> {
+    try {
+      const perfilId = await AsyncStorage.getItem(PERFIL_ATIVO_KEY);
+      if (!perfilId) return null;
+
+      const perfis = await this.getPerfis();
+      return perfis.find(p => p.id === perfilId) || null;
+    } catch (error) {
+      console.error('Erro ao buscar perfil ativo:', error);
+      return null;
+    }
+  },
+
+  async setPerfilAtivo(perfilId: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(PERFIL_ATIVO_KEY, perfilId);
+    } catch (error) {
+      console.error('Erro ao definir perfil ativo:', error);
       throw error;
     }
   }

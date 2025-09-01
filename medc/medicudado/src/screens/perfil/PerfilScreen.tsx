@@ -1,40 +1,195 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Alert
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../../contexts/AuthContext';
+import { StorageService } from '../../services/StorageService';
+import { Perfil, PerfilIdoso, PerfilCuidador } from '../../types';
 
 const PerfilScreen = () => {
-  const { user, logout } = useAuth();
+  const [tipoPerfil, setTipoPerfil] = useState<'idoso' | 'cuidador'>('idoso');
+  const [nome, setNome] = useState('');
+  const [dataNascimento, setDataNascimento] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [condicoesMedicas, setCondicoesMedicas] = useState('');
+  const [alergias, setAlergias] = useState('');
+  const [relacao, setRelacao] = useState('');
 
-  const handleLogout = async () => {
-    await logout();
+  useEffect(() => {
+    carregarPerfilAtivo();
+  }, []);
+
+  const carregarPerfilAtivo = async () => {
+    const perfil = await StorageService.getPerfilAtivo();
+    if (perfil) {
+      setTipoPerfil(perfil.tipo);
+      setNome(perfil.nome);
+      setDataNascimento(perfil.dataNascimento || '');
+      setTelefone(perfil.telefone || '');
+
+      if (perfil.tipo === 'idoso') {
+        const perfilIdoso = perfil as PerfilIdoso;
+        setCondicoesMedicas(perfilIdoso.condicoesMedicas?.join(', ') || '');
+        setAlergias(perfilIdoso.alergias?.join(', ') || '');
+      } else {
+        const perfilCuidador = perfil as PerfilCuidador;
+        setRelacao(perfilCuidador.relacao);
+      }
+    }
+  };
+
+  const salvarPerfil = async () => {
+    if (!nome) {
+      Alert.alert('Erro', 'Por favor, preencha o nome');
+      return;
+    }
+
+    try {
+      const perfilBase: Partial<Perfil> = {
+        id: Date.now().toString(),
+        nome,
+        dataNascimento,
+        telefone,
+      };
+
+      let perfil: PerfilIdoso | PerfilCuidador;
+
+      if (tipoPerfil === 'idoso') {
+        perfil = {
+          ...perfilBase,
+          tipo: 'idoso',
+          condicoesMedicas: condicoesMedicas.split(',').map(c => c.trim()).filter(Boolean),
+          alergias: alergias.split(',').map(a => a.trim()).filter(Boolean),
+        } as PerfilIdoso;
+      } else {
+        perfil = {
+          ...perfilBase,
+          tipo: 'cuidador',
+          relacao,
+          idososVinculados: [],
+        } as PerfilCuidador;
+      }
+
+      await StorageService.salvarPerfil(perfil);
+      await StorageService.setPerfilAtivo(perfil.id);
+      Alert.alert('Sucesso', 'Perfil salvo com sucesso!');
+    } catch (error) {
+      Alert.alert('Erro', 'Erro ao salvar perfil');
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.profileContainer}>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatar} />
+      <ScrollView style={styles.content}>
+        <Text style={styles.title}>Meu Perfil</Text>
+
+        <View style={styles.tipoPerfilContainer}>
+          <TouchableOpacity
+            style={[
+              styles.tipoPerfilButton,
+              tipoPerfil === 'idoso' && styles.tipoPerfilSelected
+            ]}
+            onPress={() => setTipoPerfil('idoso')}
+          >
+            <Text style={[
+              styles.tipoPerfilText,
+              tipoPerfil === 'idoso' && styles.tipoPerfilTextSelected
+            ]}>Idoso</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.tipoPerfilButton,
+              tipoPerfil === 'cuidador' && styles.tipoPerfilSelected
+            ]}
+            onPress={() => setTipoPerfil('cuidador')}
+          >
+            <Text style={[
+              styles.tipoPerfilText,
+              tipoPerfil === 'cuidador' && styles.tipoPerfilTextSelected
+            ]}>Cuidador</Text>
+          </TouchableOpacity>
         </View>
 
-        <Text style={styles.userName}>{user?.name || 'Usuário'}</Text>
-        <Text style={styles.userRole}>{user?.role || 'Função não definida'}</Text>
-        <Text style={styles.userEmail}>{user?.email || 'email@exemplo.com'}</Text>
-      </View>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Nome *</Text>
+          <TextInput
+            style={styles.input}
+            value={nome}
+            onChangeText={setNome}
+            placeholder="Digite seu nome completo"
+          />
+        </View>
 
-      <View style={styles.infoCard}>
-        <Text style={styles.infoText}>
-          Esta é uma tela básica de perfil. Aqui seriam implementadas as configurações
-          do usuário e outras funcionalidades relacionadas ao perfil.
-        </Text>
-      </View>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Data de Nascimento</Text>
+          <TextInput
+            style={styles.input}
+            value={dataNascimento}
+            onChangeText={setDataNascimento}
+            placeholder="DD/MM/AAAA"
+          />
+        </View>
 
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={handleLogout}
-      >
-        <Text style={styles.logoutButtonText}>Sair</Text>
-      </TouchableOpacity>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Telefone</Text>
+          <TextInput
+            style={styles.input}
+            value={telefone}
+            onChangeText={setTelefone}
+            placeholder="(00) 00000-0000"
+            keyboardType="phone-pad"
+          />
+        </View>
+
+        {tipoPerfil === 'idoso' ? (
+          <>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Condições Médicas</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={condicoesMedicas}
+                onChangeText={setCondicoesMedicas}
+                placeholder="Digite suas condições médicas (separadas por vírgula)"
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Alergias</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={alergias}
+                onChangeText={setAlergias}
+                placeholder="Digite suas alergias (separadas por vírgula)"
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+          </>
+        ) : (
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Relação com o Idoso</Text>
+            <TextInput
+              style={styles.input}
+              value={relacao}
+              onChangeText={setRelacao}
+              placeholder="Ex: filho(a), cônjuge, etc"
+            />
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.button} onPress={salvarPerfil}>
+          <Text style={styles.buttonText}>Salvar Perfil</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -42,66 +197,74 @@ const PerfilScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#f5f5f5',
+  },
+  content: {
     padding: 20,
   },
-  profileContainer: {
-    alignItems: 'center',
-    marginVertical: 30,
-  },
-  avatarContainer: {
-    marginBottom: 20,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#E0E0E0',
-  },
-  userName: {
+  title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333333',
-    marginBottom: 5,
+    marginBottom: 20,
+    color: '#333',
   },
-  userRole: {
-    fontSize: 16,
-    color: '#0066CC',
-    marginBottom: 10,
+  tipoPerfilContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
   },
-  userEmail: {
-    fontSize: 14,
-    color: '#666666',
-  },
-  infoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 20,
-    marginVertical: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  infoText: {
-    fontSize: 16,
-    color: '#666666',
-    lineHeight: 24,
-    textAlign: 'center',
-  },
-  logoutButton: {
-    backgroundColor: '#F44336',
-    borderRadius: 5,
+  tipoPerfilButton: {
+    flex: 1,
     padding: 15,
+    backgroundColor: '#fff',
     alignItems: 'center',
-    marginTop: 'auto',
+    marginHorizontal: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
-  logoutButtonText: {
-    color: '#FFFFFF',
+  tipoPerfilSelected: {
+    backgroundColor: '#4CAF50',
+    borderColor: '#4CAF50',
+  },
+  tipoPerfilText: {
     fontSize: 16,
-    fontWeight: '600',
-  }
+    color: '#666',
+  },
+  tipoPerfilTextSelected: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  inputGroup: {
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: '#666',
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  button: {
+    backgroundColor: '#4CAF50',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
 export default PerfilScreen;

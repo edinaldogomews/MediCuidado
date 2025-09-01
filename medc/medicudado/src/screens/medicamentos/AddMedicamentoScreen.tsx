@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,13 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert
+  Alert,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StorageService } from '../../services/StorageService';
 import { Medicamento } from '../../types';
+import { medicamentosPopulares } from '../../data/medicamentosPopulares';
 
 const AddMedicamentoScreen = ({ navigation }) => {
   const [nome, setNome] = useState('');
@@ -20,6 +22,30 @@ const AddMedicamentoScreen = ({ navigation }) => {
   const [quantidade, setQuantidade] = useState('');
   const [unidade, setUnidade] = useState('');
   const [alertaEstoque, setAlertaEstoque] = useState('');
+  const [sugestoes, setSugestoes] = useState<typeof medicamentosPopulares>([]);
+  const [mostrarSugestoes, setMostrarSugestoes] = useState(false);
+
+  const filtrarMedicamentos = (texto: string) => {
+    setNome(texto);
+    if (texto.length > 2) {
+      const filtrados = medicamentosPopulares.filter(med =>
+        med.nome.toLowerCase().includes(texto.toLowerCase())
+      );
+      setSugestoes(filtrados);
+      setMostrarSugestoes(true);
+    } else {
+      setSugestoes([]);
+      setMostrarSugestoes(false);
+    }
+  };
+
+  const selecionarMedicamento = (medicamento: typeof medicamentosPopulares[0]) => {
+    setNome(medicamento.nome);
+    if (medicamento.formas.length > 0) {
+      setDosagem(medicamento.formas[0]);
+    }
+    setMostrarSugestoes(false);
+  };
 
   const handleSalvar = async () => {
     if (!nome || !dosagem || !horario || !quantidade || !unidade) {
@@ -56,6 +82,16 @@ const AddMedicamentoScreen = ({ navigation }) => {
     }
   };
 
+  const renderSugestao = ({ item }) => (
+    <TouchableOpacity
+      style={styles.sugestaoItem}
+      onPress={() => selecionarMedicamento(item)}
+    >
+      <Text style={styles.sugestaoNome}>{item.nome}</Text>
+      <Text style={styles.sugestaoFormas}>{item.formas.join(', ')}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.content}>
@@ -66,9 +102,20 @@ const AddMedicamentoScreen = ({ navigation }) => {
           <TextInput
             style={styles.input}
             value={nome}
-            onChangeText={setNome}
-            placeholder="Digite o nome do medicamento"
+            onChangeText={filtrarMedicamentos}
+            placeholder="Digite ou selecione o medicamento"
           />
+          {mostrarSugestoes && sugestoes.length > 0 && (
+            <View style={styles.sugestoesContainer}>
+              <FlatList
+                data={sugestoes}
+                renderItem={renderSugestao}
+                keyExtractor={item => item.nome}
+                nestedScrollEnabled
+                style={styles.sugestoesList}
+              />
+            </View>
+          )}
         </View>
 
         <View style={styles.inputGroup}>
@@ -188,6 +235,37 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  sugestoesContainer: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    elevation: 4,
+    zIndex: 1000,
+    maxHeight: 200,
+  },
+  sugestoesList: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+  },
+  sugestaoItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  sugestaoNome: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  sugestaoFormas: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
   },
 });
 
