@@ -1,0 +1,69 @@
+import React from 'react';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { NavigationContainer } from '@react-navigation/native';
+
+import HomeScreen from '../screens/home/HomeScreen';
+import MedicamentosScreen from '../screens/medicamentos/MedicamentosScreen';
+import AddMedicamentoScreen from '../screens/medicamentos/AddMedicamentoScreen';
+import AlarmesScreen from '../screens/alarmes/AlarmesScreen';
+import PerfilScreen from '../screens/perfil/PerfilScreen';
+
+const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
+
+const MedicamentosStack = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="MedicamentosList"
+        component={MedicamentosScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AddMedicamento"
+        component={AddMedicamentoScreen}
+        options={{
+          headerTitle: 'Novo Medicamento',
+          headerStyle: {
+            backgroundColor: '#4CAF50',
+          },
+          headerTintColor: '#fff',
+        }}
+      />
+    </Stack.Navigator>
+  );
+};
+
+const AppNavigator = () => {
+  return (
+    <NavigationContainer>
+      <Tab.Navigator
+        screenOptions={{
+          tabBarActiveTintColor: '#4CAF50',
+          tabBarInactiveTintColor: 'gray',
+          headerShown: false,
+        }}
+      >
+        <Tab.Screen
+          name="Home"
+          component={HomeScreen}
+        />
+        <Tab.Screen
+          name="Medicamentos"
+          component={MedicamentosStack}
+        />
+        <Tab.Screen
+          name="Alarmes"
+          component={AlarmesScreen}
+        />
+        <Tab.Screen
+          name="Perfil"
+          component={PerfilScreen}
+        />
+      </Tab.Navigator>
+    </NavigationContainer>
+  );
+};
+
+export default AppNavigator;

@@ -1,17 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StorageService } from '../../services/StorageService';
+import { Medicamento } from '../../types';
 
-const MedicamentosScreen = () => {
-  const medicamentos = [
-    { id: '1', nome: 'Exemplo de Medicamento', horario: '08:00', dosagem: '1 comprimido' }
-  ];
+const MedicamentosScreen = ({ navigation }) => {
+  const [medicamentos, setMedicamentos] = useState<Medicamento[]>([]);
 
-  const renderItem = ({ item }) => (
+  useEffect(() => {
+    loadMedicamentos();
+
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadMedicamentos();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
+  const loadMedicamentos = async () => {
+    const data = await StorageService.getMedicamentos();
+    setMedicamentos(data);
+  };
+
+  const renderItem = ({ item }: { item: Medicamento }) => (
     <View style={styles.medicamentoCard}>
       <Text style={styles.medicamentoNome}>{item.nome}</Text>
-      <Text style={styles.medicamentoInfo}>Horário: {item.horario}</Text>
       <Text style={styles.medicamentoInfo}>Dosagem: {item.dosagem}</Text>
+      <Text style={styles.medicamentoInfo}>Horários: {item.horarios.join(', ')}</Text>
+      {item.instrucoes && (
+        <Text style={styles.medicamentoInstrucoes}>{item.instrucoes}</Text>
+      )}
     </View>
   );
 
@@ -31,7 +49,10 @@ const MedicamentosScreen = () => {
         }
       />
 
-      <TouchableOpacity style={styles.addButton}>
+      <TouchableOpacity
+        style={styles.addButton}
+        onPress={() => navigation.navigate('AddMedicamento')}
+      >
         <Text style={styles.addButtonText}>+ Adicionar Medicamento</Text>
       </TouchableOpacity>
     </SafeAreaView>
@@ -80,6 +101,12 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
   },
+  medicamentoInstrucoes: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
   addButton: {
     backgroundColor: '#4CAF50',
     padding: 16,
@@ -96,6 +123,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#666',
     marginTop: 20,
+    fontSize: 16,
   },
 });
 
