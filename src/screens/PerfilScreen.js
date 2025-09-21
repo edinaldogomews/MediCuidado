@@ -1,0 +1,313 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
+  TextInput,
+  Alert,
+} from 'react-native';
+import { useAuth } from '../contexts/AuthContext';
+
+const PerfilScreen = ({ navigation }) => {
+  const { userType, logout } = useAuth();
+
+  const [editando, setEditando] = useState(false);
+  const [perfil, setPerfil] = useState({
+    nome: 'Maria Silva',
+    idade: '72',
+    telefone: '(11) 99999-9999',
+    email: 'maria.silva@email.com',
+    endereco: 'Rua das Flores, 123 - São Paulo/SP',
+    contatoEmergencia: 'João Silva - (11) 88888-8888',
+  });
+
+  const salvarPerfil = () => {
+    Alert.alert(
+      'Sucesso',
+      'Perfil atualizado com sucesso!',
+      [{ text: 'OK', onPress: () => setEditando(false) }]
+    );
+  };
+
+  const confirmarLogout = () => {
+    Alert.alert(
+      'Sair',
+      'Tem certeza que deseja sair do aplicativo?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Sair', onPress: logout, style: 'destructive' }
+      ]
+    );
+  };
+
+  const renderCampo = (label, campo, placeholder = '') => (
+    <View style={styles.campoContainer}>
+      <Text style={styles.campoLabel}>{label}</Text>
+      {editando ? (
+        <TextInput
+          style={styles.campoInput}
+          value={perfil[campo]}
+          onChangeText={(value) => setPerfil(prev => ({ ...prev, [campo]: value }))}
+          placeholder={placeholder}
+        />
+      ) : (
+        <Text style={styles.campoTexto}>{perfil[campo] || 'Não informado'}</Text>
+      )}
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.backButtonText}>← Voltar</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>Meu Perfil</Text>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => editando ? salvarPerfil() : setEditando(true)}
+        >
+          <Text style={styles.editButtonText}>
+            {editando ? '💾 Salvar' : '✏️ Editar'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.content}>
+        <View style={styles.avatarSection}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{perfil.nome.charAt(0)}</Text>
+          </View>
+          <Text style={styles.nomeUsuario}>{perfil.nome}</Text>
+          <Text style={styles.tipoUsuario}>
+            {userType === 'cuidador' ? '👨‍⚕️ Cuidador' : '👴 Usuário'}
+          </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📋 Informações Pessoais</Text>
+          {renderCampo('Nome completo', 'nome', 'Digite seu nome')}
+          {renderCampo('Idade', 'idade', 'Digite sua idade')}
+          {renderCampo('Telefone', 'telefone', '(00) 00000-0000')}
+          {renderCampo('E-mail', 'email', 'seu@email.com')}
+          {renderCampo('Endereço', 'endereco', 'Rua, número - Cidade/UF')}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🚨 Contato de Emergência</Text>
+          {renderCampo('Contato de emergência', 'contatoEmergencia', 'Nome - Telefone')}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📊 Estatísticas</Text>
+
+          <View style={styles.statsGrid}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>4</Text>
+              <Text style={styles.statLabel}>Medicamentos</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>12</Text>
+              <Text style={styles.statLabel}>Doses Hoje</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>98%</Text>
+              <Text style={styles.statLabel}>Adesão</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>15</Text>
+              <Text style={styles.statLabel}>Dias de Uso</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>⚙️ Ações</Text>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Configuracoes')}
+          >
+            <Text style={styles.actionButtonText}>🔧 Configurações</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Ajuda')}
+          >
+            <Text style={styles.actionButtonText}>❓ Ajuda e Suporte</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, styles.logoutButton]}
+            onPress={confirmarLogout}
+          >
+            <Text style={[styles.actionButtonText, styles.logoutButtonText]}>
+              🚪 Sair do Aplicativo
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    backgroundColor: '#673AB7',
+    padding: 20,
+    paddingTop: 40,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  backButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 8,
+    borderRadius: 5,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  editButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    padding: 8,
+    borderRadius: 5,
+  },
+  editButtonText: {
+    color: '#fff',
+    fontSize: 12,
+  },
+  content: {
+    flex: 1,
+  },
+  avatarSection: {
+    alignItems: 'center',
+    padding: 30,
+    backgroundColor: '#fff',
+    marginBottom: 15,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#673AB7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  nomeUsuario: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  tipoUsuario: {
+    fontSize: 16,
+    color: '#666',
+  },
+  section: {
+    margin: 15,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+  },
+  campoContainer: {
+    marginBottom: 15,
+  },
+  campoLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#555',
+    marginBottom: 5,
+  },
+  campoTexto: {
+    fontSize: 16,
+    color: '#333',
+    paddingVertical: 8,
+  },
+  campoInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#fff',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    width: '48%',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#673AB7',
+    marginBottom: 5,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+  },
+  actionButton: {
+    backgroundColor: '#f8f8f8',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  logoutButton: {
+    backgroundColor: '#F44336',
+  },
+  logoutButtonText: {
+    color: '#fff',
+  },
+});
+
+export default PerfilScreen;
