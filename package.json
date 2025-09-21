@@ -1,26 +1,13 @@
 {
-  "name": "medicuidado",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
-  },
   "dependencies": {
-    "expo": "~49.0.0",
-    "react": "18.2.0",
-    "react-native": "0.72.6",
-    "react-native-safe-area-context": "4.6.3",
     "@react-navigation/native": "^6.1.7",
+    "react-native-safe-area-context": "5.4.0",
+    "react-native-screens": "~4.11.1",
     "@react-navigation/stack": "^6.3.17",
-    "react-native-screens": "~3.22.0",
-    "react-native-gesture-handler": "~2.12.0"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.20.0"
-  },
-  "private": true
+    "react-native-gesture-handler": "~2.24.0",
+    "@react-navigation/native-stack": "*",
+    "@react-native-async-storage/async-storage": "2.1.2",
+    "@react-navigation/bottom-tabs": "*",
+    "expo-status-bar": "~2.2.3"
+  }
 }
-
