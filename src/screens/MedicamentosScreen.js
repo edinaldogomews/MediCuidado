@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useMedicamentos } from '../screens/MedicamentosContext';
 import {
   View,
   Text,
@@ -8,61 +9,57 @@ import {
   SafeAreaView,
   TextInput,
 } from 'react-native';
+import { useThemePreference } from '../contexts/ThemeContext';
 
 const MedicamentosScreen = ({ navigation }) => {
+  const { isDark } = useThemePreference();
   const [searchQuery, setSearchQuery] = useState('');
 
+  const handleBack = () => {
+    if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    const state = typeof navigation.getState === 'function' ? navigation.getState() : undefined;
+    const routeNames = state && Array.isArray(state.routeNames) ? state.routeNames : [];
+    
+    // If we're in MedicamentosTab, go back to Main (which contains the tab navigator)
+    if (routeNames.includes('Main')) {
+      navigation.navigate('Main');
+      return;
+    }
+    if (routeNames.includes('CuidadoHome')) {
+      navigation.navigate('CuidadoHome');
+      return;
+    }
+    if (routeNames.includes('SelectUserType')) {
+      navigation.navigate('SelectUserType');
+      return;
+    }
+  };
+
   // Dados simulados de medicamentos
-  const medicamentos = [
-    {
-      id: 1,
-      nome: 'Losartana 50mg',
-      tipo: 'Anti-hipertensivo',
-      estoque: 30,
-      proximaData: '2025-09-22',
-      horarios: ['08:00', '20:00'],
-    },
-    {
-      id: 2,
-      nome: 'Metformina 850mg',
-      tipo: 'Antidiabético',
-      estoque: 45,
-      proximaData: '2025-09-21',
-      horarios: ['08:00', '12:00', '20:00'],
-    },
-    {
-      id: 3,
-      nome: 'Sinvastatina 20mg',
-      tipo: 'Estatina',
-      estoque: 20,
-      proximaData: '2025-09-25',
-      horarios: ['20:00'],
-    },
-    {
-      id: 4,
-      nome: 'Omeprazol 20mg',
-      tipo: 'Protetor gástrico',
-      estoque: 15,
-      proximaData: '2025-09-23',
-      horarios: ['08:00'],
-    },
-  ];
+  // const medicamentos = [ ...simulado... ]
+const { medicamentos } = useMedicamentos();
 
   const filteredMedicamentos = medicamentos.filter(med =>
     med.nome.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const renderMedicamento = ({ item }) => (
-    <View style={styles.medicamentoCard}>
+    <View style={[
+      styles.medicamentoCard,
+      { backgroundColor: isDark ? '#1e1e1e' : '#fff' }
+    ]}>
       <View style={styles.medicamentoHeader}>
-        <Text style={styles.medicamentoNome}>{item.nome}</Text>
-        <Text style={styles.medicamentoTipo}>{item.tipo}</Text>
+        <Text style={[styles.medicamentoNome, { color: isDark ? '#ddd' : '#333' }]}>{item.nome}</Text>
+        <Text style={[styles.medicamentoTipo, { color: isDark ? '#bbb' : '#666' }]}>{item.tipo}</Text>
       </View>
 
       <View style={styles.medicamentoDetails}>
-        <Text style={styles.detailText}>📦 Estoque: {item.estoque} unidades</Text>
-        <Text style={styles.detailText}>📅 Próxima dose: {item.proximaData}</Text>
-        <Text style={styles.detailText}>
+        <Text style={[styles.detailText, { color: isDark ? '#bbb' : '#555' }]}>📦 Estoque: {item.estoque} unidades</Text>
+        <Text style={[styles.detailText, { color: isDark ? '#bbb' : '#555' }]}>📅 Próxima dose: {item.proximaData}</Text>
+        <Text style={[styles.detailText, { color: isDark ? '#bbb' : '#555' }]}>
           ⏰ Horários: {item.horarios.join(', ')}
         </Text>
       </View>
@@ -70,7 +67,7 @@ const MedicamentosScreen = ({ navigation }) => {
       <View style={styles.medicamentoActions}>
         <TouchableOpacity
           style={styles.editButton}
-          onPress={() => console.log('Editar medicamento:', item.nome)}
+          onPress={() => navigation.navigate('EditMedicamento', { medicamento: item })}
         >
           <Text style={styles.editButtonText}>✏️ Editar</Text>
         </TouchableOpacity>
@@ -86,11 +83,11 @@ const MedicamentosScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
         >
           <Text style={styles.backButtonText}>← Voltar</Text>
         </TouchableOpacity>
@@ -103,10 +100,11 @@ const MedicamentosScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5', color: isDark ? '#ddd' : '#000' }]}
           placeholder="Buscar medicamento..."
+          placeholderTextColor={isDark ? '#888' : undefined}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />

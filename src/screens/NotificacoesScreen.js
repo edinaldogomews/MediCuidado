@@ -7,8 +7,30 @@ import {
   FlatList,
   SafeAreaView,
 } from 'react-native';
+import { useThemePreference } from '../contexts/ThemeContext';
 
 const NotificacoesScreen = ({ navigation }) => {
+  const { isDark } = useThemePreference();
+  const handleBack = () => {
+    if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    const state = typeof navigation.getState === 'function' ? navigation.getState() : undefined;
+    const routeNames = state && Array.isArray(state.routeNames) ? state.routeNames : [];
+    if (routeNames.includes('Main')) {
+      navigation.navigate('Main');
+      return;
+    }
+    if (routeNames.includes('CuidadoHome')) {
+      navigation.navigate('CuidadoHome');
+      return;
+    }
+    if (routeNames.includes('SelectUserType')) {
+      navigation.navigate('SelectUserType');
+      return;
+    }
+  };
   const [notificacoes, setNotificacoes] = useState([
     {
       id: 1,
@@ -85,6 +107,7 @@ const NotificacoesScreen = ({ navigation }) => {
     <TouchableOpacity
       style={[
         styles.notificacaoCard,
+        { backgroundColor: isDark ? '#1e1e1e' : '#fff' },
         !item.lida && styles.notificacaoNaoLida
       ]}
       onPress={() => marcarComoLida(item.id)}
@@ -97,12 +120,13 @@ const NotificacoesScreen = ({ navigation }) => {
       <View style={styles.notificacaoInfo}>
         <Text style={[
           styles.notificacaoTitulo,
+          { color: isDark ? '#ddd' : '#333' },
           !item.lida && styles.textoNaoLido
         ]}>
           {item.titulo}
         </Text>
-        <Text style={styles.notificacaoMensagem}>{item.mensagem}</Text>
-        <Text style={styles.notificacaoData}>
+        <Text style={[styles.notificacaoMensagem, { color: isDark ? '#bbb' : '#555' }]}>{item.mensagem}</Text>
+        <Text style={[styles.notificacaoData, { color: isDark ? '#999' : '#777' }]}>
           📅 {item.data} às {item.horario}
         </Text>
       </View>
@@ -121,11 +145,11 @@ const NotificacoesScreen = ({ navigation }) => {
   const notificacaoNaoLidas = notificacoes.filter(n => !n.lida).length;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
         >
           <Text style={styles.backButtonText}>← Voltar</Text>
         </TouchableOpacity>
@@ -139,21 +163,21 @@ const NotificacoesScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
           <Text style={styles.statNumber}>{notificacaoNaoLidas}</Text>
-          <Text style={styles.statLabel}>Não Lidas</Text>
+          <Text style={[styles.statLabel, { color: isDark ? '#bbb' : '#666' }]}>Não Lidas</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
           <Text style={styles.statNumber}>{notificacoes.length}</Text>
-          <Text style={styles.statLabel}>Total</Text>
+          <Text style={[styles.statLabel, { color: isDark ? '#bbb' : '#666' }]}>Total</Text>
         </View>
       </View>
 
       {notificacoes.length === 0 ? (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyIcon}>🔔</Text>
-          <Text style={styles.emptyTitle}>Nenhuma notificação</Text>
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyTitle, { color: isDark ? '#ddd' : '#333' }]}>Nenhuma notificação</Text>
+          <Text style={[styles.emptyText, { color: isDark ? '#bbb' : '#666' }]}>
             Você não tem notificações no momento
           </Text>
         </View>

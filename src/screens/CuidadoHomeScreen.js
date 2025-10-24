@@ -7,9 +7,11 @@ import {
   ScrollView,
   SafeAreaView,
 } from 'react-native';
+import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 
 const CuidadoHomeScreen = ({ navigation }) => {
+  const { isDark } = useThemePreference();
   const { logout } = useAuth();
 
   // Dados simulados de medicamentos para o idoso
@@ -27,7 +29,7 @@ const CuidadoHomeScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
       <View style={styles.header}>
         <Text style={styles.title}>Meus Medicamentos</Text>
         <Text style={styles.subtitle}>Interface Simplificada</Text>
@@ -54,10 +56,10 @@ const CuidadoHomeScreen = ({ navigation }) => {
         <Text style={styles.sectionTitle}>Medicamentos de Hoje</Text>
 
         {medicamentosHoje.map((med, index) => (
-          <View key={index} style={styles.medicamentoCard}>
+          <View key={index} style={[styles.medicamentoCard, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
             <View style={styles.medicamentoInfo}>
-              <Text style={styles.medicamentoNome}>{med.nome}</Text>
-              <Text style={styles.medicamentoHorario}>📅 {med.horario}</Text>
+              <Text style={[styles.medicamentoNome, { color: isDark ? '#ddd' : '#333' }]}>{med.nome}</Text>
+              <Text style={[styles.medicamentoHorario, { color: isDark ? '#bbb' : '#666' }]}>📅 {med.horario}</Text>
             </View>
             <View style={[
               styles.statusBadge,

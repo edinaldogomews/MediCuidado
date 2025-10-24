@@ -74,6 +74,17 @@ export const StorageService = {
     }
   },
 
+  async deleteMedicamento(medicamentoId: string): Promise<void> {
+    try {
+      const medicamentos = await this.getMedicamentos();
+      const medicamentosFiltrados = medicamentos.filter(m => m.id !== medicamentoId);
+      await AsyncStorage.setItem(MEDICAMENTOS_KEY, JSON.stringify(medicamentosFiltrados));
+    } catch (error) {
+      console.error('Erro ao deletar medicamento:', error);
+      throw error;
+    }
+  },
+
   async atualizarEstoque(medicamentoId: string, novaQuantidade: number): Promise<void> {
     try {
       const medicamentos = await this.getMedicamentos();
@@ -192,5 +203,30 @@ export const StorageService = {
   async hasPinProtection(): Promise<boolean> {
     const pin = await this.getPin();
     return pin !== null;
+  },
+
+  async updateAlarmeStatus(alarmeId: string, status: string): Promise<void> {
+    try {
+      const alarmes = await this.getAlarmes();
+      const index = alarmes.findIndex(a => a.id === alarmeId);
+      if (index !== -1) {
+        alarmes[index] = { ...alarmes[index], status };
+        await AsyncStorage.setItem(ALARMES_KEY, JSON.stringify(alarmes));
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar status do alarme:', error);
+      throw error;
+    }
+  },
+
+  async deleteAlarme(alarmeId: string): Promise<void> {
+    try {
+      const alarmes = await this.getAlarmes();
+      const alarmesFiltrados = alarmes.filter(a => a.id !== alarmeId);
+      await AsyncStorage.setItem(ALARMES_KEY, JSON.stringify(alarmesFiltrados));
+    } catch (error) {
+      console.error('Erro ao deletar alarme:', error);
+      throw error;
+    }
   }
 };

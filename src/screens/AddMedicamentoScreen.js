@@ -9,8 +9,30 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
+import { useThemePreference } from '../contexts/ThemeContext';
 
 const AddMedicamentoScreen = ({ navigation }) => {
+  const { isDark } = useThemePreference();
+  const handleBack = () => {
+    if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    const state = typeof navigation.getState === 'function' ? navigation.getState() : undefined;
+    const routeNames = state && Array.isArray(state.routeNames) ? state.routeNames : [];
+    if (routeNames.includes('Main')) {
+      navigation.navigate('Main');
+      return;
+    }
+    if (routeNames.includes('CuidadoHome')) {
+      navigation.navigate('CuidadoHome');
+      return;
+    }
+    if (routeNames.includes('SelectUserType')) {
+      navigation.navigate('SelectUserType');
+      return;
+    }
+  };
   const [formData, setFormData] = useState({
     nome: '',
     dosagem: '',
@@ -66,17 +88,17 @@ const AddMedicamentoScreen = ({ navigation }) => {
       'Sucesso',
       'Medicamento adicionado com sucesso!',
       [
-        { text: 'OK', onPress: () => navigation.goBack() }
+        { text: 'OK', onPress: handleBack }
       ]
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
         >
           <Text style={styles.backButtonText}>← Cancelar</Text>
         </TouchableOpacity>
@@ -90,44 +112,48 @@ const AddMedicamentoScreen = ({ navigation }) => {
       </View>
 
       <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informações Básicas</Text>
+        <View style={[styles.section, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>Informações Básicas</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nome do Medicamento *</Text>
+            <Text style={[styles.label, { color: isDark ? '#bbb' : '#555' }]}>Nome do Medicamento *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: isDark ? '#2a2a2a' : '#fff', color: isDark ? '#ddd' : '#000', borderColor: isDark ? '#444' : '#ddd' }]}
               placeholder="Ex: Losartana"
+              placeholderTextColor={isDark ? '#888' : undefined}
               value={formData.nome}
               onChangeText={(value) => updateField('nome', value)}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Dosagem *</Text>
+            <Text style={[styles.label, { color: isDark ? '#bbb' : '#555' }]}>Dosagem *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: isDark ? '#2a2a2a' : '#fff', color: isDark ? '#ddd' : '#000', borderColor: isDark ? '#444' : '#ddd' }]}
               placeholder="Ex: 50mg"
+              placeholderTextColor={isDark ? '#888' : undefined}
               value={formData.dosagem}
               onChangeText={(value) => updateField('dosagem', value)}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Tipo/Categoria</Text>
+            <Text style={[styles.label, { color: isDark ? '#bbb' : '#555' }]}>Tipo/Categoria</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: isDark ? '#2a2a2a' : '#fff', color: isDark ? '#ddd' : '#000', borderColor: isDark ? '#444' : '#ddd' }]}
               placeholder="Ex: Anti-hipertensivo"
+              placeholderTextColor={isDark ? '#888' : undefined}
               value={formData.tipo}
               onChangeText={(value) => updateField('tipo', value)}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Quantidade em Estoque</Text>
+            <Text style={[styles.label, { color: isDark ? '#bbb' : '#555' }]}>Quantidade em Estoque</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: isDark ? '#2a2a2a' : '#fff', color: isDark ? '#ddd' : '#000', borderColor: isDark ? '#444' : '#ddd' }]}
               placeholder="Ex: 30"
+              placeholderTextColor={isDark ? '#888' : undefined}
               value={formData.estoque}
               onChangeText={(value) => updateField('estoque', value)}
               keyboardType="numeric"
@@ -135,14 +161,15 @@ const AddMedicamentoScreen = ({ navigation }) => {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Horários de Administração</Text>
+        <View style={[styles.section, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>Horários de Administração</Text>
 
           {formData.horarios.map((horario, index) => (
             <View key={index} style={styles.horarioRow}>
               <TextInput
-                style={[styles.input, styles.horarioInput]}
+                style={[styles.input, styles.horarioInput, { backgroundColor: isDark ? '#2a2a2a' : '#fff', color: isDark ? '#ddd' : '#000', borderColor: isDark ? '#444' : '#ddd' }]}
                 placeholder="Ex: 08:00"
+                placeholderTextColor={isDark ? '#888' : undefined}
                 value={horario}
                 onChangeText={(value) => updateHorario(index, value)}
               />
@@ -162,11 +189,12 @@ const AddMedicamentoScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Observações</Text>
+        <View style={[styles.section, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>Observações</Text>
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[styles.input, styles.textArea, { backgroundColor: isDark ? '#2a2a2a' : '#fff', color: isDark ? '#ddd' : '#000', borderColor: isDark ? '#444' : '#ddd' }]}
             placeholder="Observações especiais sobre o medicamento..."
+            placeholderTextColor={isDark ? '#888' : undefined}
             value={formData.observacoes}
             onChangeText={(value) => updateField('observacoes', value)}
             multiline
