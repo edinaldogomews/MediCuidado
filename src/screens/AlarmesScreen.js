@@ -118,30 +118,12 @@ const AlarmesScreen = ({ navigation }) => {
       // Map alarms with medication data and convert to the expected format
       const alarmesComMedicamentos = alarmesData.map(alarme => {
         const medicamento = medicamentos.find(m => m.id === alarme.medicamentoId);
-        
-        // Convert days object to array of day names for display
-        let diasArray = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']; // Default days
-        if (alarme.dias && typeof alarme.dias === 'object') {
-          const diasMap = {
-            segunda: 'Seg',
-            terca: 'Ter', 
-            quarta: 'Qua',
-            quinta: 'Qui',
-            sexta: 'Sex',
-            sabado: 'Sab',
-            domingo: 'Dom'
-          };
-          diasArray = Object.keys(alarme.dias)
-            .filter(dia => alarme.dias[dia])
-            .map(dia => diasMap[dia] || dia);
-        }
-        
         return {
           id: alarme.id,
           medicamento: medicamento?.nome || 'Medicamento não encontrado',
           horario: alarme.horario,
           ativo: alarme.status === 'pendente', // Convert status to ativo boolean
-          dias: diasArray,
+          dias: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'], // Default days
           status: alarme.status,
           medicamentoId: alarme.medicamentoId
         };
@@ -208,7 +190,7 @@ const AlarmesScreen = ({ navigation }) => {
         />
         <TouchableOpacity
           style={styles.editButton}
-          onPress={() => navigation.navigate('EditAlarme', { alarmeId: item.id })}
+          onPress={() => console.log('Editar alarme:', item.id)}
         >
           <Text style={styles.editButtonText}>✏️</Text>
         </TouchableOpacity>
@@ -228,7 +210,7 @@ const AlarmesScreen = ({ navigation }) => {
         <Text style={styles.title}>Alarmes</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => navigation.navigate('AddAlarme')}
+          onPress={() => console.log('Adicionar alarme')}
         >
           <Text style={styles.addButtonText}>+ Novo</Text>
         </TouchableOpacity>

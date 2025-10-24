@@ -1,7 +1,8 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Text, TouchableOpacity, View, StyleSheet, useColorScheme, Platform, useSafeAreaInsets } from 'react-native';
+import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingScreen from '../screens/LoadingScreen';
 import SelectUserTypeScreen from '../screens/SelectUserTypeScreen';
@@ -21,11 +22,16 @@ import PacientesScreen from '../screens/PacientesScreen';
 import AjudaScreen from '../screens/AjudaScreen';
 import NotificacoesScreen from '../screens/NotificacoesScreen';
 import PerfilScreen from '../screens/PerfilScreen';
+import EditMedicamentoScreen from '../screens/EditMedicamentoScreen';
+
 
 const Stack = createStackNavigator();
 
 // Componente de navegação customizada para evitar problemas com bottom tabs
 const CustomTabBar = ({ activeTab, onTabPress }) => {
+  const { isDark } = useThemePreference();
+  const insets = useSafeAreaInsets();
+
   const tabs = [
     { key: 'home', label: 'Início', icon: '🏠' },
     { key: 'medicamentos', label: 'Medicamentos', icon: '💊' },
@@ -34,13 +40,20 @@ const CustomTabBar = ({ activeTab, onTabPress }) => {
   ];
 
   return (
-    <View style={styles.tabBar}>
+    <View style={[
+      styles.tabBar,
+      {
+        backgroundColor: isDark ? '#121212' : '#fff',
+        borderTopColor: isDark ? '#222' : '#e0e0e0',
+        paddingBottom: Platform.OS === 'android' ? insets.bottom : 8,
+      }
+    ]}>
       {tabs.map((tab) => (
         <TouchableOpacity
           key={tab.key}
           style={[
             styles.tabItem,
-            activeTab === tab.key && styles.tabItemActive
+            activeTab === tab.key && (isDark ? styles.tabItemActiveDark : styles.tabItemActive)
           ]}
           onPress={() => onTabPress(tab.key)}
         >
@@ -52,7 +65,8 @@ const CustomTabBar = ({ activeTab, onTabPress }) => {
           </Text>
           <Text style={[
             styles.tabLabel,
-            activeTab === tab.key && styles.tabLabelActive
+            { color: isDark ? '#ccc' : '#666' },
+            activeTab === tab.key && (isDark ? styles.tabLabelActiveDark : styles.tabLabelActive)
           ]}>
             {tab.label}
           </Text>
@@ -65,6 +79,15 @@ const CustomTabBar = ({ activeTab, onTabPress }) => {
 // Screen wrapper com barra de navegação customizada
 const CuidadorTabNavigator = ({ navigation }) => {
   const [activeTab, setActiveTab] = React.useState('home');
+
+  // Reset to home tab when screen comes into focus
+  React.useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      setActiveTab('home');
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const handleTabPress = (tabKey) => {
     setActiveTab(tabKey);
@@ -108,6 +131,8 @@ const CuidadorTabNavigator = ({ navigation }) => {
 };
 
 const RootNavigator = () => {
+  const { isDark } = useThemePreference();
+  const navTheme = isDark ? DarkTheme : DefaultTheme;
   const { userType, isLoading } = useAuth();
 
   if (isLoading) {
@@ -115,7 +140,7 @@ const RootNavigator = () => {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!userType ? (
           <Stack.Screen
@@ -136,6 +161,7 @@ const RootNavigator = () => {
             <Stack.Screen name="Ajuda" component={AjudaScreen} />
             <Stack.Screen name="Notificacoes" component={NotificacoesScreen} />
             <Stack.Screen name="Perfil" component={PerfilScreen} />
+            <Stack.Screen name="EditMedicamento" component={EditMedicamentoScreen} />
           </>
         ) : (
           // Interface simplificada para idosos
@@ -158,21 +184,31 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
     paddingTop: 8,
-    paddingBottom: 8,
-    height: 70,
+    paddingBottom: Platform.OS === 'android' ? 0 : 8,
+    minHeight: 70,
+    // Garante que a barra fica acima da navegação do Android
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 4,
+    paddingHorizontal: 4,
   },
   tabItemActive: {
     backgroundColor: 'rgba(76, 175, 80, 0.1)',
+    borderRadius: 8,
+    marginHorizontal: 4,
+  },
+  tabItemActiveDark: {
+    backgroundColor: 'rgba(76, 175, 80, 0.25)',
     borderRadius: 8,
     marginHorizontal: 4,
   },
@@ -185,11 +221,14 @@ const styles = StyleSheet.create({
   },
   tabLabel: {
     fontSize: 10,
-    color: '#666',
     textAlign: 'center',
   },
   tabLabelActive: {
     color: '#4CAF50',
+    fontWeight: 'bold',
+  },
+  tabLabelActiveDark: {
+    color: '#81C784',
     fontWeight: 'bold',
   },
 });

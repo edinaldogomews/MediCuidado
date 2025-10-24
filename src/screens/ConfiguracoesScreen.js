@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   Switch,
 } from 'react-native';
+import { useThemePreference } from '../contexts/ThemeContext';
 
 const ConfiguracoesScreen = ({ navigation }) => {
   const handleBack = () => {
@@ -32,7 +33,8 @@ const ConfiguracoesScreen = ({ navigation }) => {
   };
   const [notificacoes, setNotificacoes] = React.useState(true);
   const [somAlarme, setSomAlarme] = React.useState(true);
-  const [modoEscuro, setModoEscuro] = React.useState(false);
+  const { themePreference, isDark, setThemePreference } = useThemePreference();
+  const modoEscuro = themePreference === 'dark' || (themePreference === 'system' && isDark);
 
   const opcoes = [
     {
@@ -56,7 +58,7 @@ const ConfiguracoesScreen = ({ navigation }) => {
       descricao: 'Usar tema escuro no aplicativo',
       tipo: 'switch',
       valor: modoEscuro,
-      onChange: setModoEscuro,
+      onChange: (val) => setThemePreference(val ? 'dark' : 'light'),
       icon: '🌙',
     },
     {
@@ -83,12 +85,15 @@ const ConfiguracoesScreen = ({ navigation }) => {
   ];
 
   const renderOpcao = (opcao, index) => (
-    <View key={index} style={styles.opcaoCard}>
+    <View key={index} style={[
+      styles.opcaoCard,
+      { borderBottomColor: isDark ? '#2a2a2a' : '#f0f0f0' }
+    ]}>
       <View style={styles.opcaoInfo}>
         <Text style={styles.opcaoIcon}>{opcao.icon}</Text>
         <View style={styles.opcaoTextos}>
-          <Text style={styles.opcaoTitulo}>{opcao.titulo}</Text>
-          <Text style={styles.opcaoDescricao}>{opcao.descricao}</Text>
+          <Text style={[styles.opcaoTitulo, { color: isDark ? '#ddd' : '#333' }]}>{opcao.titulo}</Text>
+          <Text style={[styles.opcaoDescricao, { color: isDark ? '#bbb' : '#666' }]}>{opcao.descricao}</Text>
         </View>
       </View>
 
@@ -108,7 +113,7 @@ const ConfiguracoesScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -121,21 +126,21 @@ const ConfiguracoesScreen = ({ navigation }) => {
       </View>
 
       <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferências</Text>
+        <View style={[styles.section, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>Preferências</Text>
           {opcoes.map((opcao, index) => renderOpcao(opcao, index))}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Dados</Text>
+        <View style={[styles.section, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>Dados</Text>
           <TouchableOpacity style={styles.dangerButton}>
             <Text style={styles.dangerButtonText}>🗑️ Limpar Todos os Dados</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.versionInfo}>
-          <Text style={styles.versionText}>MediCuidado v1.0.0</Text>
-          <Text style={styles.versionSubtext}>Desenvolvido com ❤️ para cuidar de você</Text>
+          <Text style={[styles.versionText, { color: isDark ? '#bbb' : '#666' }]}>MediCuidado v1.0.0</Text>
+          <Text style={[styles.versionSubtext, { color: isDark ? '#999' : '#999' }]}>Desenvolvido com ❤️ para cuidar de você</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
