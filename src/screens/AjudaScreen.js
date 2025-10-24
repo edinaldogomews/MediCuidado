@@ -8,8 +8,10 @@ import {
   SafeAreaView,
   Linking,
 } from 'react-native';
+import { useThemePreference } from '../contexts/ThemeContext';
 
 const AjudaScreen = ({ navigation }) => {
+  const { isDark } = useThemePreference();
   const faqItems = [
     {
       pergunta: 'Como adicionar um novo medicamento?',
@@ -37,12 +39,33 @@ const AjudaScreen = ({ navigation }) => {
     Linking.openURL('mailto:suporte@medicuidado.com');
   };
 
+  const handleBack = () => {
+    if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    const state = typeof navigation.getState === 'function' ? navigation.getState() : undefined;
+    const routeNames = state && Array.isArray(state.routeNames) ? state.routeNames : [];
+    if (routeNames.includes('Main')) {
+      navigation.navigate('Main');
+      return;
+    }
+    if (routeNames.includes('CuidadoHome')) {
+      navigation.navigate('CuidadoHome');
+      return;
+    }
+    if (routeNames.includes('SelectUserType')) {
+      navigation.navigate('SelectUserType');
+      return;
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
         >
           <Text style={styles.backButtonText}>← Voltar</Text>
         </TouchableOpacity>
@@ -53,66 +76,66 @@ const AjudaScreen = ({ navigation }) => {
       <ScrollView style={styles.content}>
         <View style={styles.emergencySection}>
           <Text style={styles.emergencyTitle}>🚨 Em caso de emergência</Text>
-          <TouchableOpacity style={styles.emergencyButton} onPress={contatoEmergencia}>
+          <TouchableOpacity style={[styles.emergencyButton, { backgroundColor: isDark ? '#2a2a2a' : '#fff' }]} onPress={contatoEmergencia}>
             <Text style={styles.emergencyButtonText}>📞 LIGAR PARA 192 - SAMU</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>❓ Perguntas Frequentes</Text>
+        <View style={[styles.section, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>❓ Perguntas Frequentes</Text>
           {faqItems.map((item, index) => (
             <View key={index} style={styles.faqItem}>
-              <Text style={styles.faqPergunta}>{item.pergunta}</Text>
-              <Text style={styles.faqResposta}>{item.resposta}</Text>
+              <Text style={[styles.faqPergunta, { color: isDark ? '#ddd' : '#333' }]}>{item.pergunta}</Text>
+              <Text style={[styles.faqResposta, { color: isDark ? '#bbb' : '#666' }]}>{item.resposta}</Text>
             </View>
           ))}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📖 Guia Rápido</Text>
+        <View style={[styles.section, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>📖 Guia Rápido</Text>
 
           <View style={styles.guiaItem}>
             <Text style={styles.guiaIcon}>💊</Text>
             <View style={styles.guiaTexto}>
-              <Text style={styles.guiaTitulo}>Medicamentos</Text>
-              <Text style={styles.guiaDescricao}>Adicione, edite e gerencie todos os medicamentos</Text>
+              <Text style={[styles.guiaTitulo, { color: isDark ? '#ddd' : '#333' }]}>Medicamentos</Text>
+              <Text style={[styles.guiaDescricao, { color: isDark ? '#bbb' : '#666' }]}>Adicione, edite e gerencie todos os medicamentos</Text>
             </View>
           </View>
 
           <View style={styles.guiaItem}>
             <Text style={styles.guiaIcon}>⏰</Text>
             <View style={styles.guiaTexto}>
-              <Text style={styles.guiaTitulo}>Alarmes</Text>
-              <Text style={styles.guiaDescricao}>Configure lembretes para não esquecer das doses</Text>
+              <Text style={[styles.guiaTitulo, { color: isDark ? '#ddd' : '#333' }]}>Alarmes</Text>
+              <Text style={[styles.guiaDescricao, { color: isDark ? '#bbb' : '#666' }]}>Configure lembretes para não esquecer das doses</Text>
             </View>
           </View>
 
           <View style={styles.guiaItem}>
             <Text style={styles.guiaIcon}>📋</Text>
             <View style={styles.guiaTexto}>
-              <Text style={styles.guiaTitulo}>Histórico</Text>
-              <Text style={styles.guiaDescricao}>Acompanhe o que foi tomado, perdido ou atrasado</Text>
+              <Text style={[styles.guiaTitulo, { color: isDark ? '#ddd' : '#333' }]}>Histórico</Text>
+              <Text style={[styles.guiaDescricao, { color: isDark ? '#bbb' : '#666' }]}>Acompanhe o que foi tomado, perdido ou atrasado</Text>
             </View>
           </View>
 
           <View style={styles.guiaItem}>
             <Text style={styles.guiaIcon}>📦</Text>
             <View style={styles.guiaTexto}>
-              <Text style={styles.guiaTitulo}>Estoque</Text>
-              <Text style={styles.guiaDescricao}>Controle a quantidade e validade dos medicamentos</Text>
+              <Text style={[styles.guiaTitulo, { color: isDark ? '#ddd' : '#333' }]}>Estoque</Text>
+              <Text style={[styles.guiaDescricao, { color: isDark ? '#bbb' : '#666' }]}>Controle a quantidade e validade dos medicamentos</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📞 Suporte</Text>
+        <View style={[styles.section, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>📞 Suporte</Text>
           <TouchableOpacity style={styles.suporteButton} onPress={contatoSuporte}>
             <Text style={styles.suporteButtonText}>✉️ Entrar em Contato</Text>
           </TouchableOpacity>
 
           <View style={styles.infoContato}>
-            <Text style={styles.infoText}>📧 suporte@medicuidado.com</Text>
-            <Text style={styles.infoText}>🕒 Atendimento: 8h às 18h</Text>
+            <Text style={[styles.infoText, { color: isDark ? '#bbb' : '#666' }]}>📧 suporte@medicuidado.com</Text>
+            <Text style={[styles.infoText, { color: isDark ? '#bbb' : '#666' }]}>🕒 Atendimento: 8h às 18h</Text>
           </View>
         </View>
       </ScrollView>

@@ -7,9 +7,11 @@ import {
   ScrollView,
   SafeAreaView,
 } from 'react-native';
+import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 
 const HomeScreen = ({ navigation }) => {
+  const { isDark } = useThemePreference();
   const { userType, logout } = useAuth();
 
   const menuItems = [
@@ -64,7 +66,7 @@ const HomeScreen = ({ navigation }) => {
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
       <View style={styles.header}>
         <Text style={styles.title}>MediCuidado</Text>
         <Text style={styles.subtitle}>Painel do Cuidador</Text>
@@ -78,12 +80,15 @@ const HomeScreen = ({ navigation }) => {
           {menuItems.map((item, index) => (
             <TouchableOpacity
               key={index}
-              style={styles.menuItem}
+              style={[
+                styles.menuItem,
+                { backgroundColor: isDark ? '#1e1e1e' : '#fff' }
+              ]}
               onPress={item.onPress}
             >
               <Text style={styles.menuIcon}>{item.icon}</Text>
-              <Text style={styles.menuTitle}>{item.title}</Text>
-              <Text style={styles.menuDescription}>{item.description}</Text>
+              <Text style={[styles.menuTitle, { color: isDark ? '#ddd' : '#333' }]}>{item.title}</Text>
+              <Text style={[styles.menuDescription, { color: isDark ? '#bbb' : '#666' }]}>{item.description}</Text>
             </TouchableOpacity>
           ))}
         </View>

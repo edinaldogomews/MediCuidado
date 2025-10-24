@@ -7,8 +7,30 @@ import {
   FlatList,
   SafeAreaView,
 } from 'react-native';
+import { useThemePreference } from '../contexts/ThemeContext';
 
 const HistoricoScreen = ({ navigation }) => {
+  const { isDark } = useThemePreference();
+  const handleBack = () => {
+    if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    const state = typeof navigation.getState === 'function' ? navigation.getState() : undefined;
+    const routeNames = state && Array.isArray(state.routeNames) ? state.routeNames : [];
+    if (routeNames.includes('Main')) {
+      navigation.navigate('Main');
+      return;
+    }
+    if (routeNames.includes('CuidadoHome')) {
+      navigation.navigate('CuidadoHome');
+      return;
+    }
+    if (routeNames.includes('SelectUserType')) {
+      navigation.navigate('SelectUserType');
+      return;
+    }
+  };
   const [filtroAtivo, setFiltroAtivo] = useState('todos');
 
   const historico = [
@@ -94,11 +116,11 @@ const HistoricoScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
         >
           <Text style={styles.backButtonText}>← Voltar</Text>
         </TouchableOpacity>
@@ -117,12 +139,14 @@ const HistoricoScreen = ({ navigation }) => {
             key={filtro.key}
             style={[
               styles.filtroButton,
+              { backgroundColor: isDark ? '#1e1e1e' : '#fff' },
               filtroAtivo === filtro.key && { backgroundColor: filtro.color }
             ]}
             onPress={() => setFiltroAtivo(filtro.key)}
           >
             <Text style={[
               styles.filtroText,
+              { color: isDark ? '#bbb' : '#666' },
               filtroAtivo === filtro.key && { color: '#fff' }
             ]}>
               {filtro.label}
@@ -132,7 +156,7 @@ const HistoricoScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.statsContainer}>
-        <Text style={styles.statsText}>
+        <Text style={[styles.statsText, { color: isDark ? '#bbb' : '#666' }]}>
           {historicoFiltrado.length} registros encontrados
         </Text>
       </View>

@@ -8,8 +8,32 @@ import {
   SafeAreaView,
   TextInput,
 } from 'react-native';
+import { useThemePreference } from '../contexts/ThemeContext';
 
 const PacientesScreen = ({ navigation }) => {
+  const { isDark } = useThemePreference();
+  const handleBack = () => {
+    if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    const state = typeof navigation.getState === 'function' ? navigation.getState() : undefined;
+    const routeNames = state && Array.isArray(state.routeNames) ? state.routeNames : [];
+    
+    // If we're in PacientesTab, go back to Main (which contains the tab navigator)
+    if (routeNames.includes('Main')) {
+      navigation.navigate('Main');
+      return;
+    }
+    if (routeNames.includes('CuidadoHome')) {
+      navigation.navigate('CuidadoHome');
+      return;
+    }
+    if (routeNames.includes('SelectUserType')) {
+      navigation.navigate('SelectUserType');
+      return;
+    }
+  };
   const [searchQuery, setSearchQuery] = useState('');
 
   const pacientes = [
@@ -76,11 +100,11 @@ const PacientesScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
         >
           <Text style={styles.backButtonText}>← Voltar</Text>
         </TouchableOpacity>
@@ -93,23 +117,24 @@ const PacientesScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.searchContainer}>
+      <View style={[styles.searchContainer, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5', color: isDark ? '#ddd' : '#000' }]}
           placeholder="Buscar paciente..."
+          placeholderTextColor={isDark ? '#888' : undefined}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
 
       <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
           <Text style={styles.statNumber}>{pacientes.filter(p => p.status === 'ativo').length}</Text>
-          <Text style={styles.statLabel}>Pacientes Ativos</Text>
+          <Text style={[styles.statLabel, { color: isDark ? '#bbb' : '#666' }]}>Pacientes Ativos</Text>
         </View>
-        <View style={styles.statCard}>
+        <View style={[styles.statCard, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
           <Text style={styles.statNumber}>{pacientes.length}</Text>
-          <Text style={styles.statLabel}>Total</Text>
+          <Text style={[styles.statLabel, { color: isDark ? '#bbb' : '#666' }]}>Total</Text>
         </View>
       </View>
 

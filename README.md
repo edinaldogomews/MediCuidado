@@ -1,152 +1,190 @@
-# MediCudado - Aplicativo de Gerenciamento de Medicamentos
+# MediCuidado - Aplicação de Gerenciamento de Medicamentos
 
-## Descrição
-O MediCudado é um aplicativo móvel desenvolvido em React Native + Expo para auxiliar no gerenciamento de medicamentos, oferecendo recursos como controle de horários, estoque e histórico de medicações.
+## 📱 Visão Geral
 
-## Pré-requisitos
+O **MediCuidado** é uma aplicação mobile desenvolvida em React Native e totalmente adaptada para o **Expo**, focada no gerenciamento inteligente de medicamentos para idosos e seus cuidadores. A aplicação oferece duas interfaces distintas otimizadas para diferentes perfis de usuários.
 
-Antes de começar, certifique-se de ter instalado em sua máquina:
+## 🎯 Objetivo Principal
+
+Facilitar o controle e acompanhamento de medicamentos, reduzindo erros de medicação e melhorando a adesão ao tratamento através de uma interface intuitiva e recursos de monitoramento em tempo real.
+
+## 👥 Perfis de Usuário
+
+### 🧑‍⚕️ Cuidador (Interface Completa)
+- Dashboard completo com navegação por abas
+- Gerenciamento total de medicamentos, alarmes e pacientes
+- Controle de estoque com alertas automáticos
+- Relatórios detalhados e histórico completo
+- Configurações avançadas de segurança e notificações
+
+### 👴 Idoso (Interface Simplificada)
+- Visualização clara dos medicamentos do dia
+- Próximo medicamento destacado com horário
+- Botões grandes para marcar como tomado
+- Acesso direto à ajuda e emergência
+- Interface com ícones e textos grandes
+
+## 🛠️ Tecnologias Utilizadas
+
+- **React Native** - Framework para desenvolvimento mobile
+- **Expo** - Plataforma para desenvolvimento React Native
+- **React Navigation** - Navegação entre telas
+- **AsyncStorage** - Armazenamento local de dados
+- **Context API** - Gerenciamento de estado global
+
+## 📋 Pré-requisitos
+
+Antes de começar, certifique-se de ter instalado:
 
 - [Node.js](https://nodejs.org/) (versão 14 ou superior)
 - [npm](https://www.npmjs.com/) ou [Yarn](https://yarnpkg.com/)
 - [Git](https://git-scm.com/)
 - [Expo Go](https://expo.dev/client) (no seu dispositivo móvel)
+- [Expo CLI](https://docs.expo.dev/workflow/expo-cli/)
 
-## Configuração do Ambiente
+## 🚀 Instalação e Execução
 
-1. Instale o Expo CLI globalmente:
-```bash
-npm install -g expo-cli
-```
-
-2. Clone o repositório:
+### 1. Clone o repositório
 ```bash
 git clone [URL_DO_REPOSITORIO]
-cd medc/medicudado
+cd MediCuidado
 ```
 
-3. Instale as dependências do projeto:
+### 2. Instale as dependências
 ```bash
 npm install
 ```
 
-## Executando o Projeto
-
-1. Inicie o servidor de desenvolvimento:
+### 3. Execute o projeto
 ```bash
 npm start
 # ou
 expo start
 ```
 
-2. Você terá algumas opções para executar o aplicativo:
+### 4. Execute no dispositivo
+- Escaneie o QR Code com o app **Expo Go** (Android/iOS)
+- Ou pressione `a` para Android Emulator
+- Ou pressione `i` para iOS Simulator
 
-- Escaneie o QR Code com o aplicativo Expo Go (Android) ou Câmera (iOS)
-- Pressione 'a' no terminal para abrir no emulador Android
-- Pressione 'i' no terminal para abrir no simulador iOS
-- Pressione 'w' para abrir na versão web
-
-## Estrutura do Projeto
+## 🏗️ Estrutura do Projeto
 
 ```
-medicudado/
-├── src/
-│   ├── screens/         # Telas do aplicativo
-│   ├── navigation/      # Configurações de navegação
-│   ├── services/        # Serviços e APIs
-│   ├── components/      # Componentes reutilizáveis
-│   ├── contexts/        # Contextos React
-│   ├── theme/          # Configurações de tema
-│   └── types/          # Definições de tipos TypeScript
+MediCuidado/
+├── App.js                  # Componente raiz da aplicação
+├── app.json               # Configuração do Expo
+├── index.js               # Ponto de entrada
+├── package.json           # Dependências e scripts
+├── assets/                # Recursos visuais (ícones, splash)
+└── src/                   # Código fonte principal
+    ├── contexts/          # Contextos React (AuthContext)
+    ├── navigation/        # Sistema de navegação
+    ├── screens/           # Todas as telas da aplicação
+    └── services/          # Serviços e utilitários
 ```
 
-## Funcionalidades Principais
+## 📱 Funcionalidades Principais
 
-- 📱 Gerenciamento de medicamentos
-- ⏰ Sistema de alarmes e notificações
-- 📊 Controle de estoque
-- 📋 Histórico de medicações
-- 👤 Perfil do usuário
-- 🔒 Sistema de segurança com PIN
+### Para Cuidadores:
+- ✅ **Dashboard completo** com navegação por abas
+- ✅ **Gerenciamento de medicamentos** (adicionar, editar, excluir)
+- ✅ **Sistema de alarmes** configurável
+- ✅ **Controle de estoque** com alertas
+- ✅ **Histórico detalhado** com filtros
+- ✅ **Gestão de pacientes**
+- ✅ **Central de notificações**
+- ✅ **Configurações avançadas**
 
-## Solução de Problemas
+### Para Idosos:
+- ✅ **Interface simplificada**
+- ✅ **Próximo medicamento** em destaque
+- ✅ **Botões grandes** e claros
+- ✅ **Acesso direto** à ajuda
 
-### Error: Unable to start server
-Se você encontrar problemas ao iniciar o servidor, tente:
-1. Limpar o cache:
+## 🎨 Telas Implementadas
+
+1. **SelectUserTypeScreen** - Seleção do tipo de usuário
+2. **HomeScreen** - Dashboard principal do cuidador
+3. **CuidadoHomeScreen** - Interface simplificada para idosos
+4. **MedicamentosScreen** - Lista e gerenciamento de medicamentos
+5. **AddMedicamentoScreen** - Formulário para adicionar medicamentos
+6. **AlarmesScreen** - Configuração de alarmes
+7. **PacientesScreen** - Gestão de pacientes
+8. **EstoqueScreen** - Controle de estoque
+9. **HistoricoScreen** - Histórico de medicações
+10. **NotificacoesScreen** - Central de notificações
+11. **ConfiguracoesScreen** - Configurações do aplicativo
+12. **PerfilScreen** - Perfil do usuário
+13. **AjudaScreen** - Central de ajuda e suporte
+
+## 🔧 Configuração para Desenvolvimento
+
+### Estrutura de Navegação
+A aplicação utiliza uma navegação customizada adaptada para o Expo:
+- **Stack Navigator** principal
+- **Barra de navegação customizada** (evitando problemas com bottom tabs)
+- **Navegação condicional** baseada no tipo de usuário
+
+### Context API
+O projeto utiliza React Context para gerenciamento de estado:
+- **AuthContext** - Gerencia autenticação e tipo de usuário
+- **userType** - Define qual interface mostrar (cuidador/idoso)
+
+## 📊 Scripts Disponíveis
+
 ```bash
-expo start -c
-```
+# Iniciar o projeto
+npm start
 
-2. Reinstalar as dependências:
-```bash
-rm -rf node_modules
-npm install
-```
-
-### Erro de Metro Bundler
-Se o Metro Bundler não iniciar corretamente:
-1. Pare o servidor (Ctrl+C)
-2. Execute:
-```bash
-npm start --reset-cache
-```
-
-### Problemas com o Expo Go
-Se o aplicativo não conectar com o Expo Go:
-1. Verifique se seu celular está na mesma rede Wi-Fi que o computador
-2. Desative temporariamente o firewall
-3. Use o modo "Tunnel" no Expo DevTools
-
-## Testando no Emulador
-
-### Android
-1. Instale o Android Studio
-2. Configure um dispositivo virtual (AVD)
-3. Execute:
-```bash
+# Executar no Android
 npm run android
-```
 
-### iOS (apenas macOS)
-1. Instale o Xcode
-2. Execute:
-```bash
+# Executar no iOS  
 npm run ios
+
+# Executar no Web
+npm run web
+
+# Build para produção
+expo build:android
+expo build:ios
 ```
 
-## Desenvolvimento
+## 🎯 Adaptações para Expo
 
-Para desenvolver novas funcionalidades:
+- ✅ **Navegação customizada** sem dependências problemáticas
+- ✅ **Componentes nativos** 100% compatíveis
+- ✅ **Hot reload** completo
+- ✅ **Build otimizado** para múltiplas plataformas
+- ✅ **Testagem instantânea** via Expo Go
 
-1. Crie uma nova branch:
-```bash
-git checkout -b feature/nova-funcionalidade
-```
+## 🔮 Funcionalidades Futuras
 
-2. Faça suas alterações seguindo os padrões do projeto
+- 🔔 **Notificações push** nativas
+- 📱 **Modo offline** completo
+- 🔒 **Autenticação biométrica**
+- ☁️ **Sincronização na nuvem**
+- 📊 **Relatórios avançados** com gráficos
+- 🌙 **Modo escuro** automático
 
-3. Teste localmente:
-```bash
-npm test
-```
+## 📞 Suporte
 
-4. Faça o commit seguindo o padrão convencional:
-```bash
-git commit -m "feat: adiciona nova funcionalidade"
-```
+Para dúvidas ou suporte:
+- **Email**: suporte@medicuidado.com
+- **Documentação**: README_COMPLETO.md
+- **Issues**: [Abrir issue no repositório]
 
-## Versionamento
+## 📄 Licença
 
-O projeto segue o [Semantic Versioning](https://semver.org/). Para ver as versões disponíveis, acesse as [tags neste repositório](URL_DO_REPOSITORIO/tags).
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
 
-## Suporte
+## 👨‍💻 Desenvolvido para
 
-Em caso de dúvidas ou problemas:
-1. Consulte a documentação
-2. Abra uma issue no repositório
-3. Entre em contato com a equipe de desenvolvimento
+**Projeto Acadêmico** - Universidade [Nome da Universidade]  
+**Curso**: [Nome do Curso]  
+**Disciplina**: [Nome da Disciplina]  
+**Ano**: 2025
 
-## Licença
+---
 
-Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
+**MediCuidado** - Desenvolvido com ❤️ para cuidar de quem você ama.

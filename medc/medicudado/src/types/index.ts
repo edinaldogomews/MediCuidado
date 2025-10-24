@@ -21,4 +21,28 @@ export interface PerfilCuidador extends Perfil {
   idososVinculados: string[]; // IDs dos idosos
 }
 
-// ...existing code...
+export interface Medicamento {
+  id: string;
+  nome: string;
+  dosagem: string;
+  horario: string;
+  instrucoes?: string;
+  estoque: {
+    quantidade: number;
+    unidade: string;
+    alertaQuandoAbaixoDe?: number;
+  };
+  fabricante?: string;
+  status: 'ativo' | 'inativo';
+  dataCriacao: string;
+  dataAtualizacao: string;
+}
+
+export interface Alarme {
+  id: string;
+  medicamentoId: string;
+  horario: string;
+  status: 'pendente' | 'tomado' | 'perdido';
+  dataCriacao: string;
+  dataAtualizacao: string;
+}

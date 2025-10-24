@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,9 +9,32 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
+import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { StorageService } from '../services/StorageService';
 
 const PerfilScreen = ({ navigation }) => {
+  const { isDark } = useThemePreference();
+  const handleBack = () => {
+    if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    const state = typeof navigation.getState === 'function' ? navigation.getState() : undefined;
+    const routeNames = state && Array.isArray(state.routeNames) ? state.routeNames : [];
+    if (routeNames.includes('Main')) {
+      navigation.navigate('Main');
+      return;
+    }
+    if (routeNames.includes('CuidadoHome')) {
+      navigation.navigate('CuidadoHome');
+      return;
+    }
+    if (routeNames.includes('SelectUserType')) {
+      navigation.navigate('SelectUserType');
+      return;
+    }
+  };
   const { userType, logout } = useAuth();
 
   const [editando, setEditando] = useState(false);
@@ -23,13 +46,51 @@ const PerfilScreen = ({ navigation }) => {
     endereco: 'Rua das Flores, 123 - São Paulo/SP',
     contatoEmergencia: 'João Silva - (11) 88888-8888',
   });
+  const [perfilOriginal, setPerfilOriginal] = useState(null);
 
-  const salvarPerfil = () => {
-    Alert.alert(
-      'Sucesso',
-      'Perfil atualizado com sucesso!',
-      [{ text: 'OK', onPress: () => setEditando(false) }]
-    );
+  // Load profile data when component mounts
+  useEffect(() => {
+    loadPerfil();
+  }, []);
+
+  const loadPerfil = async () => {
+    try {
+      const perfilData = await StorageService.getPerfil();
+      setPerfil(perfilData);
+      setPerfilOriginal(perfilData);
+    } catch (error) {
+      console.error('Erro ao carregar perfil:', error);
+    }
+  };
+
+  const iniciarEdicao = () => {
+    setPerfilOriginal({ ...perfil });
+    setEditando(true);
+  };
+
+  const cancelarEdicao = () => {
+    if (perfilOriginal) {
+      setPerfil(perfilOriginal);
+    }
+    setEditando(false);
+  };
+
+  const salvarPerfil = async () => {
+    try {
+      await StorageService.savePerfil(perfil);
+      Alert.alert(
+        'Sucesso',
+        'Perfil atualizado com sucesso!',
+        [{ text: 'OK', onPress: () => setEditando(false) }]
+      );
+    } catch (error) {
+      console.error('Erro ao salvar perfil:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível salvar o perfil. Tente novamente.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const confirmarLogout = () => {
@@ -60,23 +121,38 @@ const PerfilScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
         >
           <Text style={styles.backButtonText}>← Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Meu Perfil</Text>
-        <TouchableOpacity
-          style={styles.editButton}
-          onPress={() => editando ? salvarPerfil() : setEditando(true)}
-        >
-          <Text style={styles.editButtonText}>
-            {editando ? '💾 Salvar' : '✏️ Editar'}
-          </Text>
-        </TouchableOpacity>
+        {editando ? (
+          <View style={styles.editButtonsContainer}>
+            <TouchableOpacity
+              style={[styles.editButton, styles.cancelButton]}
+              onPress={cancelarEdicao}
+            >
+              <Text style={styles.editButtonText}>❌ Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.editButton, styles.saveButton]}
+              onPress={salvarPerfil}
+            >
+              <Text style={styles.editButtonText}>💾 Salvar</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={iniciarEdicao}
+          >
+            <Text style={styles.editButtonText}>✏️ Editar</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView style={styles.content}>
@@ -84,14 +160,14 @@ const PerfilScreen = ({ navigation }) => {
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{perfil.nome.charAt(0)}</Text>
           </View>
-          <Text style={styles.nomeUsuario}>{perfil.nome}</Text>
-          <Text style={styles.tipoUsuario}>
+          <Text style={[styles.nomeUsuario, { color: isDark ? '#ddd' : '#333' }]}>{perfil.nome}</Text>
+          <Text style={[styles.tipoUsuario, { color: isDark ? '#bbb' : '#666' }]}>
             {userType === 'cuidador' ? '👨‍⚕️ Cuidador' : '👴 Usuário'}
           </Text>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📋 Informações Pessoais</Text>
+        <View style={[styles.section, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>📋 Informações Pessoais</Text>
           {renderCampo('Nome completo', 'nome', 'Digite seu nome')}
           {renderCampo('Idade', 'idade', 'Digite sua idade')}
           {renderCampo('Telefone', 'telefone', '(00) 00000-0000')}
@@ -99,49 +175,49 @@ const PerfilScreen = ({ navigation }) => {
           {renderCampo('Endereço', 'endereco', 'Rua, número - Cidade/UF')}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🚨 Contato de Emergência</Text>
+        <View style={[styles.section, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>🚨 Contato de Emergência</Text>
           {renderCampo('Contato de emergência', 'contatoEmergencia', 'Nome - Telefone')}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📊 Estatísticas</Text>
+        <View style={[styles.section, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>📊 Estatísticas</Text>
 
           <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
+            <View style={[styles.statItem, { backgroundColor: isDark ? '#2a2a2a' : '#f8f8f8' }]}>
               <Text style={styles.statNumber}>4</Text>
-              <Text style={styles.statLabel}>Medicamentos</Text>
+              <Text style={[styles.statLabel, { color: isDark ? '#bbb' : '#666' }]}>Medicamentos</Text>
             </View>
-            <View style={styles.statItem}>
+            <View style={[styles.statItem, { backgroundColor: isDark ? '#2a2a2a' : '#f8f8f8' }]}>
               <Text style={styles.statNumber}>12</Text>
-              <Text style={styles.statLabel}>Doses Hoje</Text>
+              <Text style={[styles.statLabel, { color: isDark ? '#bbb' : '#666' }]}>Doses Hoje</Text>
             </View>
-            <View style={styles.statItem}>
+            <View style={[styles.statItem, { backgroundColor: isDark ? '#2a2a2a' : '#f8f8f8' }]}>
               <Text style={styles.statNumber}>98%</Text>
-              <Text style={styles.statLabel}>Adesão</Text>
+              <Text style={[styles.statLabel, { color: isDark ? '#bbb' : '#666' }]}>Adesão</Text>
             </View>
-            <View style={styles.statItem}>
+            <View style={[styles.statItem, { backgroundColor: isDark ? '#2a2a2a' : '#f8f8f8' }]}>
               <Text style={styles.statNumber}>15</Text>
-              <Text style={styles.statLabel}>Dias de Uso</Text>
+              <Text style={[styles.statLabel, { color: isDark ? '#bbb' : '#666' }]}>Dias de Uso</Text>
             </View>
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>⚙️ Ações</Text>
+        <View style={[styles.section, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>⚙️ Ações</Text>
 
           <TouchableOpacity
-            style={styles.actionButton}
+            style={[styles.actionButton, { backgroundColor: isDark ? '#2a2a2a' : '#f8f8f8' }]}
             onPress={() => navigation.navigate('Configuracoes')}
           >
-            <Text style={styles.actionButtonText}>🔧 Configurações</Text>
+            <Text style={[styles.actionButtonText, { color: isDark ? '#ddd' : '#333' }]}>🔧 Configurações</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionButton}
+            style={[styles.actionButton, { backgroundColor: isDark ? '#2a2a2a' : '#f8f8f8' }]}
             onPress={() => navigation.navigate('Ajuda')}
           >
-            <Text style={styles.actionButtonText}>❓ Ajuda e Suporte</Text>
+            <Text style={[styles.actionButtonText, { color: isDark ? '#ddd' : '#333' }]}>❓ Ajuda e Suporte</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -193,6 +269,16 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: '#fff',
     fontSize: 12,
+  },
+  editButtonsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  cancelButton: {
+    backgroundColor: 'rgba(244, 67, 54, 0.8)',
+  },
+  saveButton: {
+    backgroundColor: 'rgba(76, 175, 80, 0.8)',
   },
   content: {
     flex: 1,

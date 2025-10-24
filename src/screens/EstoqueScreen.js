@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,10 +6,16 @@ import {
   TouchableOpacity,
   FlatList,
   SafeAreaView,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
+import { useThemePreference } from '../contexts/ThemeContext';
+import { StorageService } from '../services/StorageService';
 
 const EstoqueScreen = ({ navigation }) => {
-  const estoque = [
+  const { isDark } = useThemePreference();
+  const [estoque, setEstoque] = useState([
     {
       id: 1,
       medicamento: 'Losartana 50mg',
@@ -34,7 +40,47 @@ const EstoqueScreen = ({ navigation }) => {
       vencimento: '2025-10-05',
       status: 'vencendo',
     },
-  ];
+  ]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedMedicamento, setSelectedMedicamento] = useState(null);
+  const [quantidadeEntrada, setQuantidadeEntrada] = useState('');
+
+  // Carregar dados do storage ao iniciar
+  useEffect(() => {
+    carregarEstoque();
+  }, []);
+
+  const carregarEstoque = async () => {
+    try {
+      const estoqueArmazenado = await StorageService.getEstoque();
+      if (estoqueArmazenado && estoqueArmazenado.length > 0) {
+        setEstoque(estoqueArmazenado);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar estoque:', error);
+    }
+  };
+  const handleBack = () => {
+    if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    const state = typeof navigation.getState === 'function' ? navigation.getState() : undefined;
+    const routeNames = state && Array.isArray(state.routeNames) ? state.routeNames : [];
+    if (routeNames.includes('Main')) {
+      navigation.navigate('Main');
+      return;
+    }
+    if (routeNames.includes('CuidadoHome')) {
+      navigation.navigate('CuidadoHome');
+      return;
+    }
+    if (routeNames.includes('SelectUserType')) {
+      navigation.navigate('SelectUserType');
+      return;
+    }
+  };
+
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -49,6 +95,51 @@ const EstoqueScreen = ({ navigation }) => {
       case 'baixo': return 'Estoque Baixo';
       case 'vencendo': return 'Vencendo';
       default: return 'Normal';
+    }
+  };
+
+  const atualizarStatusEstoque = (medicamento) => {
+    const { quantidade, minimo } = medicamento;
+    if (quantidade <= minimo) {
+      return 'baixo';
+    }
+    return 'normal';
+  };
+
+  const handleAdicionarEntrada = async () => {
+    if (!selectedMedicamento) {
+      Alert.alert('Erro', 'Selecione um medicamento');
+      return;
+    }
+    if (!quantidadeEntrada || isNaN(quantidadeEntrada) || parseInt(quantidadeEntrada) <= 0) {
+      Alert.alert('Erro', 'Digite uma quantidade válida');
+      return;
+    }
+
+    try {
+      const novaQuantidade = selectedMedicamento.quantidade + parseInt(quantidadeEntrada);
+      const novoStatus = atualizarStatusEstoque({
+        ...selectedMedicamento,
+        quantidade: novaQuantidade,
+      });
+
+      const estoqueAtualizado = estoque.map(item =>
+        item.id === selectedMedicamento.id
+          ? { ...item, quantidade: novaQuantidade, status: novoStatus }
+          : item
+      );
+
+      // Persistir no storage
+      await StorageService.updateEstoque(estoqueAtualizado);
+
+      setEstoque(estoqueAtualizado);
+      Alert.alert('Sucesso', `${quantidadeEntrada} unidades adicionadas a ${selectedMedicamento.medicamento}`);
+      setModalVisible(false);
+      setSelectedMedicamento(null);
+      setQuantidadeEntrada('');
+    } catch (error) {
+      console.error('Erro ao adicionar entrada:', error);
+      Alert.alert('Erro', 'Não foi possível adicionar a entrada. Tente novamente.');
     }
   };
 
@@ -70,31 +161,31 @@ const EstoqueScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
         >
           <Text style={styles.backButtonText}>← Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Controle de Estoque</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => console.log('Adicionar ao estoque')}
+          onPress={() => setModalVisible(true)}
         >
           <Text style={styles.addButtonText}>+ Entrada</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.alertsContainer}>
-        <View style={styles.alertCard}>
+        <View style={[styles.alertCard, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
           <Text style={styles.alertNumber}>{estoque.filter(item => item.status === 'baixo').length}</Text>
-          <Text style={styles.alertLabel}>Estoque Baixo</Text>
+          <Text style={[styles.alertLabel, { color: isDark ? '#bbb' : '#666' }]}>Estoque Baixo</Text>
         </View>
-        <View style={styles.alertCard}>
+        <View style={[styles.alertCard, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
           <Text style={styles.alertNumber}>{estoque.filter(item => item.status === 'vencendo').length}</Text>
-          <Text style={styles.alertLabel}>Vencendo</Text>
+          <Text style={[styles.alertLabel, { color: isDark ? '#bbb' : '#666' }]}>Vencendo</Text>
         </View>
       </View>
 
@@ -105,6 +196,70 @@ const EstoqueScreen = ({ navigation }) => {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
       />
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+            <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#333' }]}>Adicionar Entrada</Text>
+
+            <Text style={[styles.label, { color: isDark ? '#bbb' : '#333' }]}>Selecione o medicamento:</Text>
+            <View style={styles.medicamentoList}>
+              {estoque.map(item => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.medicamentoOption,
+                    selectedMedicamento?.id === item.id && styles.medicamentoOptionSelected,
+                    { backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5' }
+                  ]}
+                  onPress={() => setSelectedMedicamento(item)}
+                >
+                  <Text style={[styles.medicamentoOptionText, { color: isDark ? '#fff' : '#333' }]}>
+                    {item.medicamento}
+                  </Text>
+                  <Text style={[styles.medicamentoOptionSubtext, { color: isDark ? '#aaa' : '#666' }]}>
+                    Atual: {item.quantidade} un.
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.label, { color: isDark ? '#bbb' : '#333' }]}>Quantidade a adicionar:</Text>
+            <TextInput
+              style={[styles.input, { color: isDark ? '#fff' : '#333', borderColor: isDark ? '#444' : '#ddd' }]}
+              placeholder="Digite a quantidade"
+              placeholderTextColor={isDark ? '#666' : '#999'}
+              keyboardType="numeric"
+              value={quantidadeEntrada}
+              onChangeText={setQuantidadeEntrada}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
+                onPress={() => {
+                  setModalVisible(false);
+                  setSelectedMedicamento(null);
+                  setQuantidadeEntrada('');
+                }}
+              >
+                <Text style={styles.buttonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.button, styles.confirmButton]}
+                onPress={handleAdicionarEntrada}
+              >
+                <Text style={styles.buttonText}>Confirmar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -222,6 +377,83 @@ const styles = StyleSheet.create({
   statusText: {
     color: '#fff',
     fontSize: 12,
+    fontWeight: 'bold',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+    marginTop: 15,
+  },
+  medicamentoList: {
+    maxHeight: 200,
+    marginBottom: 15,
+  },
+  medicamentoOption: {
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  medicamentoOptionSelected: {
+    borderColor: '#9C27B0',
+    backgroundColor: 'rgba(156, 39, 176, 0.1)',
+  },
+  medicamentoOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  medicamentoOptionSubtext: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 20,
+  },
+  button: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#ccc',
+  },
+  confirmButton: {
+    backgroundColor: '#9C27B0',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });
