@@ -28,12 +28,6 @@ const HomeScreen = ({ navigation }) => {
       onPress: () => navigation.navigate('AlarmesTab')
     },
     {
-      title: 'Pacientes',
-      icon: '👥',
-      description: 'Lista de pacientes',
-      onPress: () => navigation.navigate('PacientesTab')
-    },
-    {
       title: 'Estoque',
       icon: '📦',
       description: 'Controle de estoque',

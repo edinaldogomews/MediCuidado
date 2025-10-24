@@ -18,7 +18,6 @@ import AlarmesScreen from '../screens/AlarmesScreen';
 import EstoqueScreen from '../screens/EstoqueScreen';
 import HistoricoScreen from '../screens/HistoricoScreen';
 import ConfiguracoesScreen from '../screens/ConfiguracoesScreen';
-import PacientesScreen from '../screens/PacientesScreen';
 import AjudaScreen from '../screens/AjudaScreen';
 import NotificacoesScreen from '../screens/NotificacoesScreen';
 import PerfilScreen from '../screens/PerfilScreen';
