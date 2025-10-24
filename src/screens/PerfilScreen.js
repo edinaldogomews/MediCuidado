@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { StorageService } from '../services/StorageService';
 
 const PerfilScreen = ({ navigation }) => {
   const { isDark } = useThemePreference();
@@ -46,51 +45,13 @@ const PerfilScreen = ({ navigation }) => {
     endereco: 'Rua das Flores, 123 - São Paulo/SP',
     contatoEmergencia: 'João Silva - (11) 88888-8888',
   });
-  const [perfilOriginal, setPerfilOriginal] = useState(null);
 
-  // Load profile data when component mounts
-  useEffect(() => {
-    loadPerfil();
-  }, []);
-
-  const loadPerfil = async () => {
-    try {
-      const perfilData = await StorageService.getPerfil();
-      setPerfil(perfilData);
-      setPerfilOriginal(perfilData);
-    } catch (error) {
-      console.error('Erro ao carregar perfil:', error);
-    }
-  };
-
-  const iniciarEdicao = () => {
-    setPerfilOriginal({ ...perfil });
-    setEditando(true);
-  };
-
-  const cancelarEdicao = () => {
-    if (perfilOriginal) {
-      setPerfil(perfilOriginal);
-    }
-    setEditando(false);
-  };
-
-  const salvarPerfil = async () => {
-    try {
-      await StorageService.savePerfil(perfil);
-      Alert.alert(
-        'Sucesso',
-        'Perfil atualizado com sucesso!',
-        [{ text: 'OK', onPress: () => setEditando(false) }]
-      );
-    } catch (error) {
-      console.error('Erro ao salvar perfil:', error);
-      Alert.alert(
-        'Erro',
-        'Não foi possível salvar o perfil. Tente novamente.',
-        [{ text: 'OK' }]
-      );
-    }
+  const salvarPerfil = () => {
+    Alert.alert(
+      'Sucesso',
+      'Perfil atualizado com sucesso!',
+      [{ text: 'OK', onPress: () => setEditando(false) }]
+    );
   };
 
   const confirmarLogout = () => {
@@ -130,29 +91,14 @@ const PerfilScreen = ({ navigation }) => {
           <Text style={styles.backButtonText}>← Voltar</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Meu Perfil</Text>
-        {editando ? (
-          <View style={styles.editButtonsContainer}>
-            <TouchableOpacity
-              style={[styles.editButton, styles.cancelButton]}
-              onPress={cancelarEdicao}
-            >
-              <Text style={styles.editButtonText}>❌ Cancelar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.editButton, styles.saveButton]}
-              onPress={salvarPerfil}
-            >
-              <Text style={styles.editButtonText}>💾 Salvar</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={iniciarEdicao}
-          >
-            <Text style={styles.editButtonText}>✏️ Editar</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => editando ? salvarPerfil() : setEditando(true)}
+        >
+          <Text style={styles.editButtonText}>
+            {editando ? '💾 Salvar' : '✏️ Editar'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
@@ -269,16 +215,6 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: '#fff',
     fontSize: 12,
-  },
-  editButtonsContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  cancelButton: {
-    backgroundColor: 'rgba(244, 67, 54, 0.8)',
-  },
-  saveButton: {
-    backgroundColor: 'rgba(76, 175, 80, 0.8)',
   },
   content: {
     flex: 1,
