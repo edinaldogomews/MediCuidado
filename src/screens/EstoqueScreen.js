@@ -5,57 +5,58 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  SafeAreaView,
   Modal,
   TextInput,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useThemePreference } from '../contexts/ThemeContext';
-import { StorageService } from '../services/StorageService';
+import databaseService from '../database/DatabaseService';
 
 const EstoqueScreen = ({ navigation }) => {
   const { isDark } = useThemePreference();
-  const [estoque, setEstoque] = useState([
-    {
-      id: 1,
-      medicamento: 'Losartana 50mg',
-      quantidade: 30,
-      minimo: 10,
-      vencimento: '2025-12-15',
-      status: 'normal',
-    },
-    {
-      id: 2,
-      medicamento: 'Metformina 850mg',
-      quantidade: 5,
-      minimo: 15,
-      vencimento: '2025-11-20',
-      status: 'baixo',
-    },
-    {
-      id: 3,
-      medicamento: 'Sinvastatina 20mg',
-      quantidade: 20,
-      minimo: 10,
-      vencimento: '2025-10-05',
-      status: 'vencendo',
-    },
-  ]);
+  const [estoque, setEstoque] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMedicamento, setSelectedMedicamento] = useState(null);
   const [quantidadeEntrada, setQuantidadeEntrada] = useState('');
 
-  // Carregar dados do storage ao iniciar
+  // Carregar dados do banco ao iniciar
   useEffect(() => {
     carregarEstoque();
   }, []);
 
+  // Recarregar quando a tela ganhar foco
+  useFocusEffect(
+    React.useCallback(() => {
+      carregarEstoque();
+    }, [])
+  );
+
   const carregarEstoque = async () => {
     try {
-      const estoqueArmazenado = await StorageService.getEstoque();
-      if (estoqueArmazenado && estoqueArmazenado.length > 0) {
-        setEstoque(estoqueArmazenado);
-      }
+      const estoqueData = await databaseService.getAllEstoque();
+
+      // Formata os dados para exibição
+      const estoqueFormatado = await Promise.all(estoqueData.map(async (item) => {
+        const medicamento = await databaseService.getMedicamentoById(item.medicamento_id);
+        return {
+          id: item.id,
+          medicamento: medicamento ? `${medicamento.nome} ${medicamento.dosagem}` : 'Medicamento não encontrado',
+          medicamento_id: item.medicamento_id,
+          quantidade: item.quantidade,
+          minimo: item.minimo,
+          maximo: item.maximo,
+          vencimento: item.vencimento,
+          status: item.status,
+          lote: item.lote
+        };
+      }));
+
+      setEstoque(estoqueFormatado);
+
+      // Verifica e cria alertas automáticos
+      await databaseService.verificarECriarAlertas();
     } catch (error) {
       console.error('Erro ao carregar estoque:', error);
     }
@@ -117,26 +118,28 @@ const EstoqueScreen = ({ navigation }) => {
     }
 
     try {
-      const novaQuantidade = selectedMedicamento.quantidade + parseInt(quantidadeEntrada);
-      const novoStatus = atualizarStatusEstoque({
-        ...selectedMedicamento,
-        quantidade: novaQuantidade,
+      const quantidade = parseInt(quantidadeEntrada);
+
+      // Adiciona quantidade no estoque
+      await databaseService.adicionarQuantidade(selectedMedicamento.medicamento_id, quantidade);
+
+      // Registra movimentação
+      await databaseService.addMovimentacao({
+        medicamento_id: selectedMedicamento.medicamento_id,
+        tipo: 'entrada',
+        quantidade: quantidade,
+        data: new Date().toISOString().split('T')[0],
+        usuario: 'Usuário',
+        motivo: 'Entrada manual'
       });
 
-      const estoqueAtualizado = estoque.map(item =>
-        item.id === selectedMedicamento.id
-          ? { ...item, quantidade: novaQuantidade, status: novoStatus }
-          : item
-      );
-
-      // Persistir no storage
-      await StorageService.updateEstoque(estoqueAtualizado);
-
-      setEstoque(estoqueAtualizado);
       Alert.alert('Sucesso', `${quantidadeEntrada} unidades adicionadas a ${selectedMedicamento.medicamento}`);
       setModalVisible(false);
       setSelectedMedicamento(null);
       setQuantidadeEntrada('');
+
+      // Recarrega o estoque
+      await carregarEstoque();
     } catch (error) {
       console.error('Erro ao adicionar entrada:', error);
       Alert.alert('Erro', 'Não foi possível adicionar a entrada. Tente novamente.');

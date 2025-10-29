@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Ignorar arquivos markdown exceto README
+*.md
+!README.md

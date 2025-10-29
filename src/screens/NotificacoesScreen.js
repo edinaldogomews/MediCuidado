@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useThemePreference } from '../contexts/ThemeContext';
+import databaseService from '../database/DatabaseService';
 
 const NotificacoesScreen = ({ navigation }) => {
   const { isDark } = useThemePreference();
@@ -31,65 +33,91 @@ const NotificacoesScreen = ({ navigation }) => {
       return;
     }
   };
-  const [notificacoes, setNotificacoes] = useState([
-    {
-      id: 1,
-      tipo: 'medicamento',
-      titulo: 'Hora do medicamento!',
-      mensagem: 'Losartana 50mg - 08:00',
-      data: '2025-09-21',
-      horario: '08:00',
-      lida: false,
-      prioridade: 'alta',
-    },
-    {
-      id: 2,
-      tipo: 'estoque',
-      titulo: 'Estoque baixo',
-      mensagem: 'Metformina 850mg está acabando (5 unidades restantes)',
-      data: '2025-09-21',
-      horario: '07:30',
-      lida: true,
-      prioridade: 'media',
-    },
-    {
-      id: 3,
-      tipo: 'vencimento',
-      titulo: 'Medicamento vencendo',
-      mensagem: 'Sinvastatina 20mg vence em 2 semanas',
-      data: '2025-09-20',
-      horario: '09:00',
-      lida: false,
-      prioridade: 'media',
-    },
-    {
-      id: 4,
-      tipo: 'perdido',
-      titulo: 'Dose perdida',
-      mensagem: 'Metformina 850mg não foi tomada às 12:00',
-      data: '2025-09-20',
-      horario: '12:30',
-      lida: true,
-      prioridade: 'alta',
-    },
-  ]);
+  const [notificacoes, setNotificacoes] = useState([]);
 
-  const marcarComoLida = (id) => {
-    setNotificacoes(prev => prev.map(notif =>
-      notif.id === id ? { ...notif, lida: true } : notif
-    ));
+  useEffect(() => {
+    carregarNotificacoes();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      carregarNotificacoes();
+    }, [])
+  );
+
+  const carregarNotificacoes = async () => {
+    try {
+      // Primeiro verifica e cria alertas automáticos
+      await databaseService.verificarECriarAlertas();
+
+      // Depois carrega todos os alertas
+      const alertas = await databaseService.getAllAlertas();
+
+      // Formata os alertas para notificações
+      const notificacoesFormatadas = await Promise.all(alertas.map(async (alerta) => {
+        let medicamentoNome = 'Sistema';
+        if (alerta.medicamento_id) {
+          const medicamento = await databaseService.getMedicamentoById(alerta.medicamento_id);
+          medicamentoNome = medicamento ? `${medicamento.nome} ${medicamento.dosagem}` : 'Medicamento';
+        }
+
+        // Define título baseado no tipo
+        let titulo = 'Notificação';
+        let prioridade = 'media';
+
+        if (alerta.tipo === 'estoque_baixo') {
+          titulo = '📦 Estoque Baixo';
+          prioridade = 'alta';
+        } else if (alerta.tipo === 'vencimento_proximo') {
+          titulo = '⚠️ Vencimento Próximo';
+          prioridade = 'media';
+        } else if (alerta.tipo === 'alarme') {
+          titulo = '💊 Hora do Medicamento';
+          prioridade = 'alta';
+        }
+
+        return {
+          id: alerta.id,
+          tipo: alerta.tipo,
+          titulo: titulo,
+          mensagem: alerta.mensagem,
+          data: alerta.data,
+          horario: alerta.created_at ? new Date(alerta.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+          lida: alerta.lido === 1,
+          prioridade: prioridade,
+          medicamento_id: alerta.medicamento_id
+        };
+      }));
+
+      setNotificacoes(notificacoesFormatadas);
+    } catch (error) {
+      console.error('Erro ao carregar notificações:', error);
+    }
   };
 
-  const marcarTodasComoLidas = () => {
-    setNotificacoes(prev => prev.map(notif => ({ ...notif, lida: true })));
+  const marcarComoLida = async (id) => {
+    try {
+      await databaseService.marcarAlertaComoLido(id);
+      await carregarNotificacoes();
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida:', error);
+    }
+  };
+
+  const marcarTodasComoLidas = async () => {
+    try {
+      await databaseService.marcarTodosAlertasComoLidos();
+      await carregarNotificacoes();
+    } catch (error) {
+      console.error('Erro ao marcar todas como lidas:', error);
+    }
   };
 
   const getTipoIcon = (tipo) => {
     switch (tipo) {
-      case 'medicamento': return '💊';
-      case 'estoque': return '📦';
-      case 'vencimento': return '⚠️';
-      case 'perdido': return '❌';
+      case 'alarme': return '💊';
+      case 'estoque_baixo': return '📦';
+      case 'vencimento_proximo': return '⚠️';
       default: return '🔔';
     }
   };

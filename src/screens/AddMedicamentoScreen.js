@@ -6,9 +6,9 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  SafeAreaView,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemePreference } from '../contexts/ThemeContext';
 
 const AddMedicamentoScreen = ({ navigation }) => {

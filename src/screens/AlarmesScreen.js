@@ -5,12 +5,12 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  SafeAreaView,
   Switch,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useThemePreference } from '../contexts/ThemeContext';
-import { StorageService } from '../services/StorageService';
+import databaseService from '../database/DatabaseService';
 
 const AlarmesScreen = ({ navigation }) => {
   const { isDark } = useThemePreference();
@@ -38,101 +38,45 @@ const AlarmesScreen = ({ navigation }) => {
   };
   const [alarmes, setAlarmes] = useState([]);
 
-  // Load alarms from storage
+  // Load alarms from database
   const carregarAlarmes = async () => {
     try {
-      let alarmesData = await StorageService.getAlarmes();
-      let medicamentos = await StorageService.getMedicamentos();
+      const alarmesData = await databaseService.getAllAlarmes();
 
-      // If no alarms exist, create some sample data
-      if (alarmesData.length === 0) {
-        const sampleAlarmes = [
-          {
-            id: '1',
-            medicamentoId: '1',
-            horario: '08:00',
-            status: 'pendente',
-            dataCriacao: new Date().toISOString(),
-            dataAtualizacao: new Date().toISOString()
-          },
-          {
-            id: '2',
-            medicamentoId: '2',
-            horario: '12:00',
-            status: 'pendente',
-            dataCriacao: new Date().toISOString(),
-            dataAtualizacao: new Date().toISOString()
-          },
-          {
-            id: '3',
-            medicamentoId: '3',
-            horario: '20:00',
-            status: 'inativo',
-            dataCriacao: new Date().toISOString(),
-            dataAtualizacao: new Date().toISOString()
+      // Formata os alarmes para exibição
+      const alarmesFormatados = alarmesData.map(alarme => {
+        // Converte dias_semana para array de strings
+        const diasAtivos = [];
+        const diasMap = {
+          segunda: 'Seg',
+          terca: 'Ter',
+          quarta: 'Qua',
+          quinta: 'Qui',
+          sexta: 'Sex',
+          sabado: 'Sáb',
+          domingo: 'Dom'
+        };
+
+        Object.keys(alarme.dias_semana).forEach(dia => {
+          if (alarme.dias_semana[dia]) {
+            diasAtivos.push(diasMap[dia]);
           }
-        ];
+        });
 
-        const sampleMedicamentos = [
-          {
-            id: '1',
-            nome: 'Losartana 50mg',
-            dosagem: '50mg',
-            horario: '08:00',
-            status: 'ativo',
-            dataCriacao: new Date().toISOString(),
-            dataAtualizacao: new Date().toISOString()
-          },
-          {
-            id: '2',
-            nome: 'Metformina 850mg',
-            dosagem: '850mg',
-            horario: '12:00',
-            status: 'ativo',
-            dataCriacao: new Date().toISOString(),
-            dataAtualizacao: new Date().toISOString()
-          },
-          {
-            id: '3',
-            nome: 'Sinvastatina 20mg',
-            dosagem: '20mg',
-            horario: '20:00',
-            status: 'ativo',
-            dataCriacao: new Date().toISOString(),
-            dataAtualizacao: new Date().toISOString()
-          }
-        ];
-
-        // Save sample data
-        await StorageService.saveAlarme(sampleAlarmes[0]);
-        await StorageService.saveAlarme(sampleAlarmes[1]);
-        await StorageService.saveAlarme(sampleAlarmes[2]);
-        await StorageService.saveMedicamento(sampleMedicamentos[0]);
-        await StorageService.saveMedicamento(sampleMedicamentos[1]);
-        await StorageService.saveMedicamento(sampleMedicamentos[2]);
-
-        alarmesData = sampleAlarmes;
-        medicamentos = sampleMedicamentos;
-      }
-
-      // Map alarms with medication data and convert to the expected format
-      const alarmesComMedicamentos = alarmesData.map(alarme => {
-        const medicamento = medicamentos.find(m => m.id === alarme.medicamentoId);
         return {
           id: alarme.id,
-          medicamento: medicamento?.nome || 'Medicamento não encontrado',
+          medicamento: `${alarme.medicamento_nome} ${alarme.medicamento_dosagem}`,
           horario: alarme.horario,
-          ativo: alarme.status === 'pendente', // Convert status to ativo boolean
-          dias: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'], // Default days
-          status: alarme.status,
-          medicamentoId: alarme.medicamentoId
+          ativo: alarme.ativo === 1,
+          dias: diasAtivos,
+          observacoes: alarme.observacoes,
+          medicamento_id: alarme.medicamento_id
         };
       });
 
-      setAlarmes(alarmesComMedicamentos);
+      setAlarmes(alarmesFormatados);
     } catch (error) {
       console.error('Erro ao carregar alarmes:', error);
-      // Fallback to empty array if there's an error
       setAlarmes([]);
     }
   };
@@ -150,20 +94,8 @@ const AlarmesScreen = ({ navigation }) => {
 
   const toggleAlarme = async (id) => {
     try {
-      // Find the alarm to toggle
-      const alarme = alarmes.find(a => a.id === id);
-      if (!alarme) return;
-
-      // Determine new status based on current ativo state
-      const newStatus = alarme.ativo ? 'inativo' : 'pendente';
-      
-      // Update in storage
-      await StorageService.updateAlarmeStatus(id, newStatus);
-      
-      // Update local state
-      setAlarmes(prev => prev.map(alarme =>
-        alarme.id === id ? { ...alarme, ativo: !alarme.ativo, status: newStatus } : alarme
-      ));
+      await databaseService.toggleAlarme(id);
+      await carregarAlarmes(); // Recarrega a lista
     } catch (error) {
       console.error('Erro ao atualizar alarme:', error);
     }

@@ -1,7 +1,8 @@
 import React from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Text, TouchableOpacity, View, StyleSheet, useColorScheme, Platform, useSafeAreaInsets } from 'react-native';
+import { Text, TouchableOpacity, View, StyleSheet, useColorScheme, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingScreen from '../screens/LoadingScreen';
@@ -22,6 +23,7 @@ import AjudaScreen from '../screens/AjudaScreen';
 import NotificacoesScreen from '../screens/NotificacoesScreen';
 import PerfilScreen from '../screens/PerfilScreen';
 import EditMedicamentoScreen from '../screens/EditMedicamentoScreen';
+import PacientesScreen from '../screens/PacientesScreen';
 
 
 const Stack = createStackNavigator();

@@ -1,19 +1,59 @@
-import React, { useState } from 'react';
-import { useMedicamentos } from '../screens/MedicamentosContext';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  SafeAreaView,
   TextInput,
+  Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useThemePreference } from '../contexts/ThemeContext';
+import databaseService from '../database/DatabaseService';
 
 const MedicamentosScreen = ({ navigation }) => {
   const { isDark } = useThemePreference();
   const [searchQuery, setSearchQuery] = useState('');
+  const [medicamentos, setMedicamentos] = useState([]);
+
+  useEffect(() => {
+    carregarMedicamentos();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      carregarMedicamentos();
+    }, [])
+  );
+
+  const carregarMedicamentos = async () => {
+    try {
+      const medicamentosData = await databaseService.getMedicamentosCompletos();
+
+      // Formata os medicamentos para exibição
+      const medicamentosFormatados = medicamentosData.map(med => {
+        const estoque = med.estoque ? med.estoque.quantidade : 0;
+        const alarmes = med.alarmes || [];
+        const horarios = alarmes.map(a => a.horario);
+
+        return {
+          id: med.id,
+          nome: med.nome,
+          tipo: med.categoria || 'Medicamento',
+          dosagem: med.dosagem,
+          estoque: estoque,
+          proximaData: alarmes.length > 0 ? new Date().toISOString().split('T')[0] : '-',
+          horarios: horarios.length > 0 ? horarios : ['-']
+        };
+      });
+
+      setMedicamentos(medicamentosFormatados);
+    } catch (error) {
+      console.error('Erro ao carregar medicamentos:', error);
+    }
+  };
 
   const handleBack = () => {
     if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
@@ -22,8 +62,7 @@ const MedicamentosScreen = ({ navigation }) => {
     }
     const state = typeof navigation.getState === 'function' ? navigation.getState() : undefined;
     const routeNames = state && Array.isArray(state.routeNames) ? state.routeNames : [];
-    
-    // If we're in MedicamentosTab, go back to Main (which contains the tab navigator)
+
     if (routeNames.includes('Main')) {
       navigation.navigate('Main');
       return;
@@ -38,9 +77,32 @@ const MedicamentosScreen = ({ navigation }) => {
     }
   };
 
-  // Dados simulados de medicamentos
-  // const medicamentos = [ ...simulado... ]
-const { medicamentos } = useMedicamentos();
+  const handleExcluirMedicamento = async (medicamento) => {
+    Alert.alert(
+      'Confirmar Exclusão',
+      `Deseja realmente excluir ${medicamento.nome}?`,
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel'
+        },
+        {
+          text: 'Excluir',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await databaseService.deleteMedicamento(medicamento.id);
+              Alert.alert('Sucesso', 'Medicamento excluído com sucesso!');
+              await carregarMedicamentos(); // Recarrega a lista
+            } catch (error) {
+              console.error('Erro ao excluir medicamento:', error);
+              Alert.alert('Erro', 'Não foi possível excluir o medicamento');
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const filteredMedicamentos = medicamentos.filter(med =>
     med.nome.toLowerCase().includes(searchQuery.toLowerCase())
@@ -74,7 +136,7 @@ const { medicamentos } = useMedicamentos();
 
         <TouchableOpacity
           style={styles.deleteButton}
-          onPress={() => console.log('Excluir medicamento:', item.nome)}
+          onPress={() => handleExcluirMedicamento(item)}
         >
           <Text style={styles.deleteButtonText}>🗑️ Excluir</Text>
         </TouchableOpacity>

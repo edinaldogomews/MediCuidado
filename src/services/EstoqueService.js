@@ -1,7 +1,7 @@
 // 📦 SERVIÇO DE ESTOQUE - EstoqueService.js
-// Integra o banco de dados fake com a aplicação
+// Integra o banco de dados SQLite com a aplicação
 
-import fakeDatabase from '../database/FakeDatabase';
+import databaseService from '../database/DatabaseService';
 
 export class EstoqueService {
   // ========== OBTER DADOS ==========
@@ -12,7 +12,7 @@ export class EstoqueService {
    */
   static async getEstoque() {
     try {
-      return fakeDatabase.getAllEstoque();
+      return await databaseService.getAllEstoque();
     } catch (error) {
       console.error('Erro ao obter estoque:', error);
       throw error;
@@ -26,7 +26,7 @@ export class EstoqueService {
    */
   static async getEstoqueByMedicamentoId(medicamentoId) {
     try {
-      return fakeDatabase.getEstoqueByMedicamentoId(medicamentoId);
+      return await databaseService.getEstoqueByMedicamentoId(medicamentoId);
     } catch (error) {
       console.error('Erro ao obter estoque do medicamento:', error);
       throw error;
@@ -45,15 +45,15 @@ export class EstoqueService {
   static async adicionarEntrada(medicamentoId, quantidade, motivo = 'Entrada') {
     try {
       // Atualizar estoque
-      const estoque = fakeDatabase.adicionarQuantidade(medicamentoId, quantidade);
+      const estoque = await databaseService.adicionarQuantidade(medicamentoId, quantidade);
 
       if (!estoque) {
         throw new Error('Medicamento não encontrado no estoque');
       }
 
       // Registrar movimentação
-      fakeDatabase.addMovimentacao({
-        medicamentoId,
+      await databaseService.addMovimentacao({
+        medicamento_id: medicamentoId,
         tipo: 'entrada',
         quantidade,
         data: new Date().toISOString().split('T')[0],
@@ -77,15 +77,15 @@ export class EstoqueService {
    */
   static async adicionarSaida(medicamentoId, quantidade, motivo = 'Saída') {
     try {
-      const estoque = fakeDatabase.removerQuantidade(medicamentoId, quantidade);
+      const estoque = await databaseService.removerQuantidade(medicamentoId, quantidade);
 
       if (!estoque) {
         throw new Error('Quantidade insuficiente ou medicamento não encontrado');
       }
 
       // Registrar movimentação
-      fakeDatabase.addMovimentacao({
-        medicamentoId,
+      await databaseService.addMovimentacao({
+        medicamento_id: medicamentoId,
         tipo: 'saida',
         quantidade,
         data: new Date().toISOString().split('T')[0],
@@ -108,9 +108,9 @@ export class EstoqueService {
   static async updateEstoque(estoqueAtualizado) {
     try {
       // Atualizar cada item
-      estoqueAtualizado.forEach(item => {
-        fakeDatabase.updateEstoque(item.id, item);
-      });
+      for (const item of estoqueAtualizado) {
+        await databaseService.updateEstoque(item.id, item);
+      }
       return estoqueAtualizado;
     } catch (error) {
       console.error('Erro ao atualizar estoque:', error);
@@ -127,7 +127,7 @@ export class EstoqueService {
    */
   static async isEstoqueBaixo(medicamentoId) {
     try {
-      const estoque = fakeDatabase.getEstoqueByMedicamentoId(medicamentoId);
+      const estoque = await databaseService.getEstoqueByMedicamentoId(medicamentoId);
       if (!estoque) return false;
       return estoque.quantidade <= estoque.minimo;
     } catch (error) {
@@ -143,7 +143,7 @@ export class EstoqueService {
    */
   static async isVencendo(medicamentoId) {
     try {
-      const estoque = fakeDatabase.getEstoqueByMedicamentoId(medicamentoId);
+      const estoque = await databaseService.getEstoqueByMedicamentoId(medicamentoId);
       if (!estoque) return false;
 
       const dataVencimento = new Date(estoque.vencimento);
@@ -164,7 +164,7 @@ export class EstoqueService {
    */
   static async getStatus(medicamentoId) {
     try {
-      const estoque = fakeDatabase.getEstoqueByMedicamentoId(medicamentoId);
+      const estoque = await databaseService.getEstoqueByMedicamentoId(medicamentoId);
       if (!estoque) return 'desconhecido';
 
       const isBaixo = estoque.quantidade <= estoque.minimo;
@@ -187,7 +187,7 @@ export class EstoqueService {
    */
   static async getResumo() {
     try {
-      const estoque = fakeDatabase.getAllEstoque();
+      const estoque = await databaseService.getAllEstoque();
       const baixo = estoque.filter(e => e.quantidade <= e.minimo).length;
       const vencendo = estoque.filter(e => {
         const dataVencimento = new Date(e.vencimento);
@@ -215,8 +215,8 @@ export class EstoqueService {
    */
   static async getMovimentacoes(medicamentoId) {
     try {
-      const movimentacoes = fakeDatabase.getAllMovimentacoes();
-      return movimentacoes.filter(m => m.medicamentoId === medicamentoId);
+      const movimentacoes = await databaseService.getAllMovimentacoes();
+      return movimentacoes.filter(m => m.medicamento_id === medicamentoId);
     } catch (error) {
       console.error('Erro ao obter movimentações:', error);
       throw error;
@@ -231,7 +231,7 @@ export class EstoqueService {
    */
   static async getAlertasNaoLidos() {
     try {
-      return fakeDatabase.getAlertasNaoLidos();
+      return await databaseService.getAlertasNaoLidos();
     } catch (error) {
       console.error('Erro ao obter alertas:', error);
       throw error;
@@ -245,7 +245,7 @@ export class EstoqueService {
    */
   static async marcarAlertaComoLido(alertaId) {
     try {
-      return fakeDatabase.marcarAlertaComoLido(alertaId);
+      return await databaseService.marcarAlertaComoLido(alertaId);
     } catch (error) {
       console.error('Erro ao marcar alerta como lido:', error);
       throw error;

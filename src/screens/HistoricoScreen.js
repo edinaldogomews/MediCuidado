@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useThemePreference } from '../contexts/ThemeContext';
+import databaseService from '../database/DatabaseService';
 
 const HistoricoScreen = ({ navigation }) => {
   const { isDark } = useThemePreference();
@@ -32,47 +34,47 @@ const HistoricoScreen = ({ navigation }) => {
     }
   };
   const [filtroAtivo, setFiltroAtivo] = useState('todos');
+  const [historico, setHistorico] = useState([]);
 
-  const historico = [
-    {
-      id: 1,
-      medicamento: 'Losartana 50mg',
-      acao: 'tomado',
-      data: '2025-09-21',
-      horario: '08:00',
-      paciente: 'Maria Silva',
-    },
-    {
-      id: 2,
-      medicamento: 'Metformina 850mg',
-      acao: 'perdido',
-      data: '2025-09-21',
-      horario: '12:00',
-      paciente: 'João Santos',
-    },
-    {
-      id: 3,
-      medicamento: 'Sinvastatina 20mg',
-      acao: 'tomado',
-      data: '2025-09-20',
-      horario: '20:00',
-      paciente: 'Maria Silva',
-    },
-    {
-      id: 4,
-      medicamento: 'Omeprazol 20mg',
-      acao: 'atrasado',
-      data: '2025-09-20',
-      horario: '08:30',
-      paciente: 'Ana Costa',
-    },
-  ];
+  useEffect(() => {
+    carregarHistorico();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      carregarHistorico();
+    }, [])
+  );
+
+  const carregarHistorico = async () => {
+    try {
+      const movimentacoes = await databaseService.getAllMovimentacoes();
+
+      // Formata as movimentações para exibição
+      const historicoFormatado = await Promise.all(movimentacoes.map(async (mov) => {
+        const medicamento = await databaseService.getMedicamentoById(mov.medicamento_id);
+        return {
+          id: mov.id,
+          medicamento: medicamento ? `${medicamento.nome} ${medicamento.dosagem}` : 'Medicamento não encontrado',
+          acao: mov.tipo, // 'entrada' ou 'saida'
+          data: mov.data,
+          horario: mov.created_at ? new Date(mov.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
+          quantidade: mov.quantidade,
+          usuario: mov.usuario || 'Usuário',
+          motivo: mov.motivo || ''
+        };
+      }));
+
+      setHistorico(historicoFormatado);
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error);
+    }
+  };
 
   const filtros = [
     { key: 'todos', label: 'Todos', color: '#666' },
-    { key: 'tomado', label: 'Tomados', color: '#4CAF50' },
-    { key: 'perdido', label: 'Perdidos', color: '#F44336' },
-    { key: 'atrasado', label: 'Atrasados', color: '#FF9800' },
+    { key: 'entrada', label: 'Entradas', color: '#4CAF50' },
+    { key: 'saida', label: 'Saídas', color: '#F44336' },
   ];
 
   const historicoFiltrado = filtroAtivo === 'todos'
@@ -81,19 +83,25 @@ const HistoricoScreen = ({ navigation }) => {
 
   const getAcaoColor = (acao) => {
     switch (acao) {
-      case 'tomado': return '#4CAF50';
-      case 'perdido': return '#F44336';
-      case 'atrasado': return '#FF9800';
+      case 'entrada': return '#4CAF50';
+      case 'saida': return '#F44336';
       default: return '#666';
     }
   };
 
   const getAcaoIcon = (acao) => {
     switch (acao) {
-      case 'tomado': return '✅';
-      case 'perdido': return '❌';
-      case 'atrasado': return '⏰';
+      case 'entrada': return '📥';
+      case 'saida': return '📤';
       default: return '📋';
+    }
+  };
+
+  const getAcaoText = (acao) => {
+    switch (acao) {
+      case 'entrada': return 'Entrada';
+      case 'saida': return 'Saída';
+      default: return 'Movimentação';
     }
   };
 
@@ -105,12 +113,14 @@ const HistoricoScreen = ({ navigation }) => {
 
       <View style={styles.itemInfo}>
         <Text style={styles.medicamentoNome}>{item.medicamento}</Text>
-        <Text style={styles.paciente}>👤 {item.paciente}</Text>
-        <Text style={styles.dataHorario}>📅 {item.data} às {item.horario}</Text>
+        <Text style={styles.paciente}>👤 {item.usuario}</Text>
+        <Text style={styles.quantidade}>📦 Quantidade: {item.quantidade}</Text>
+        {item.motivo ? <Text style={styles.motivo}>💬 {item.motivo}</Text> : null}
+        <Text style={styles.dataHorario}>📅 {item.data} {item.horario ? `às ${item.horario}` : ''}</Text>
       </View>
 
       <View style={[styles.statusBadge, { backgroundColor: getAcaoColor(item.acao) }]}>
-        <Text style={styles.statusText}>{item.acao.toUpperCase()}</Text>
+        <Text style={styles.statusText}>{getAcaoText(item.acao)}</Text>
       </View>
     </View>
   );
@@ -267,6 +277,17 @@ const styles = StyleSheet.create({
   paciente: {
     fontSize: 14,
     color: '#555',
+    marginBottom: 3,
+  },
+  quantidade: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 3,
+  },
+  motivo: {
+    fontSize: 13,
+    color: '#666',
+    fontStyle: 'italic',
     marginBottom: 3,
   },
   dataHorario: {

@@ -1,7 +1,7 @@
 // 💊 SERVIÇO DE MEDICAMENTOS - MedicamentoService.js
 // Gerencia operações com medicamentos
 
-import fakeDatabase from '../database/FakeDatabase';
+import databaseService from '../database/DatabaseService';
 
 export class MedicamentoService {
   // ========== OBTER DADOS ==========
@@ -12,7 +12,7 @@ export class MedicamentoService {
    */
   static async getAllMedicamentos() {
     try {
-      return fakeDatabase.getAllMedicamentos();
+      return await databaseService.getAllMedicamentos();
     } catch (error) {
       console.error('Erro ao obter medicamentos:', error);
       throw error;
@@ -26,7 +26,7 @@ export class MedicamentoService {
    */
   static async getMedicamentoById(id) {
     try {
-      return fakeDatabase.getMedicamentoById(id);
+      return await databaseService.getMedicamentoById(id);
     } catch (error) {
       console.error('Erro ao obter medicamento:', error);
       throw error;
@@ -40,7 +40,7 @@ export class MedicamentoService {
    */
   static async getMedicamentosByCategoria(categoria) {
     try {
-      const medicamentos = fakeDatabase.getAllMedicamentos();
+      const medicamentos = await databaseService.getAllMedicamentos();
       return medicamentos.filter(m => m.categoria === categoria);
     } catch (error) {
       console.error('Erro ao obter medicamentos por categoria:', error);
@@ -54,7 +54,7 @@ export class MedicamentoService {
    */
   static async getMedicamentosAtivos() {
     try {
-      const medicamentos = fakeDatabase.getAllMedicamentos();
+      const medicamentos = await databaseService.getAllMedicamentos();
       return medicamentos.filter(m => m.ativo);
     } catch (error) {
       console.error('Erro ao obter medicamentos ativos:', error);
@@ -76,14 +76,13 @@ export class MedicamentoService {
         throw new Error('Nome e dosagem são obrigatórios');
       }
 
-      const novoMedicamento = fakeDatabase.addMedicamento({
+      const novoMedicamento = await databaseService.addMedicamento({
         nome: medicamento.nome,
         descricao: medicamento.descricao || '',
         dosagem: medicamento.dosagem,
         fabricante: medicamento.fabricante || 'Genérico',
         preco: medicamento.preco || 0,
         categoria: medicamento.categoria || 'Geral',
-        ativo: true,
       });
 
       return novoMedicamento;
@@ -101,7 +100,7 @@ export class MedicamentoService {
    */
   static async updateMedicamento(id, dados) {
     try {
-      const medicamento = fakeDatabase.updateMedicamento(id, dados);
+      const medicamento = await databaseService.updateMedicamento(id, dados);
       if (!medicamento) {
         throw new Error('Medicamento não encontrado');
       }
@@ -119,7 +118,7 @@ export class MedicamentoService {
    */
   static async deleteMedicamento(id) {
     try {
-      return fakeDatabase.deleteMedicamento(id);
+      return await databaseService.deleteMedicamento(id);
     } catch (error) {
       console.error('Erro ao deletar medicamento:', error);
       throw error;
@@ -135,7 +134,7 @@ export class MedicamentoService {
    */
   static async buscarPorNome(nome) {
     try {
-      const medicamentos = fakeDatabase.getAllMedicamentos();
+      const medicamentos = await databaseService.getAllMedicamentos();
       return medicamentos.filter(m =>
         m.nome.toLowerCase().includes(nome.toLowerCase())
       );
@@ -151,7 +150,7 @@ export class MedicamentoService {
    */
   static async getCategorias() {
     try {
-      const medicamentos = fakeDatabase.getAllMedicamentos();
+      const medicamentos = await databaseService.getAllMedicamentos();
       const categorias = [...new Set(medicamentos.map(m => m.categoria))];
       return categorias;
     } catch (error) {
@@ -166,7 +165,7 @@ export class MedicamentoService {
    */
   static async getFabricantes() {
     try {
-      const medicamentos = fakeDatabase.getAllMedicamentos();
+      const medicamentos = await databaseService.getAllMedicamentos();
       const fabricantes = [...new Set(medicamentos.map(m => m.fabricante))];
       return fabricantes;
     } catch (error) {
@@ -183,7 +182,7 @@ export class MedicamentoService {
    */
   static async getResumo() {
     try {
-      const medicamentos = fakeDatabase.getAllMedicamentos();
+      const medicamentos = await databaseService.getAllMedicamentos();
       const ativos = medicamentos.filter(m => m.ativo).length;
       const inativos = medicamentos.length - ativos;
 
@@ -205,7 +204,7 @@ export class MedicamentoService {
    */
   static async getMedicamentosComPreco() {
     try {
-      const medicamentos = fakeDatabase.getAllMedicamentos();
+      const medicamentos = await databaseService.getAllMedicamentos();
       return medicamentos.map(m => ({
         ...m,
         precoFormatado: `R$ ${m.preco.toFixed(2)}`,
@@ -222,12 +221,12 @@ export class MedicamentoService {
    */
   static async getValorTotalEstoque() {
     try {
-      const medicamentos = fakeDatabase.getAllMedicamentos();
-      const estoque = fakeDatabase.getAllEstoque();
+      const medicamentos = await databaseService.getAllMedicamentos();
+      const estoque = await databaseService.getAllEstoque();
 
       let total = 0;
       estoque.forEach(item => {
-        const medicamento = medicamentos.find(m => m.id === item.medicamentoId);
+        const medicamento = medicamentos.find(m => m.id === item.medicamento_id);
         if (medicamento) {
           total += medicamento.preco * item.quantidade;
         }
