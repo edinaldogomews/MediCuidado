@@ -14,9 +14,11 @@ import { useThemePreference } from '../contexts/ThemeContext';
 import databaseService from '../database/DatabaseService';
 
 const MedicamentosScreen = ({ navigation }) => {
-  const { isDark } = useThemePreference();
+  const themeContext = useThemePreference();
+  const isDark = themeContext?.isDark ?? false; // Proteção contra undefined
   const [searchQuery, setSearchQuery] = useState('');
   const [medicamentos, setMedicamentos] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     carregarMedicamentos();
@@ -29,7 +31,15 @@ const MedicamentosScreen = ({ navigation }) => {
   );
 
   const carregarMedicamentos = async () => {
+    // Evita múltiplas chamadas simultâneas
+    if (isLoading) return;
+
     try {
+      setIsLoading(true);
+
+      // Garante que o banco está inicializado
+      await databaseService.ensureInitialized();
+
       const medicamentosData = await databaseService.getMedicamentosCompletos();
 
       // Formata os medicamentos para exibição
@@ -58,6 +68,8 @@ const MedicamentosScreen = ({ navigation }) => {
         [{ text: 'OK' }]
       );
       setMedicamentos([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -110,11 +122,17 @@ const MedicamentosScreen = ({ navigation }) => {
     );
   };
 
-  const filteredMedicamentos = medicamentos.filter(med =>
-    med.nome.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredMedicamentos = React.useMemo(() => {
+    if (!Array.isArray(medicamentos)) return [];
+    return medicamentos.filter(med =>
+      med && med.nome && med.nome.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [medicamentos, searchQuery]);
 
-  const renderMedicamento = ({ item }) => (
+  const renderMedicamento = ({ item }) => {
+    if (!item) return null;
+
+    return (
     <View style={[
       styles.medicamentoCard,
       { backgroundColor: isDark ? '#1e1e1e' : '#fff' }
@@ -148,7 +166,8 @@ const MedicamentosScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
     </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>

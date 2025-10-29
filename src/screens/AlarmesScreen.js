@@ -13,7 +13,8 @@ import { useThemePreference } from '../contexts/ThemeContext';
 import databaseService from '../database/DatabaseService';
 
 const AlarmesScreen = ({ navigation }) => {
-  const { isDark } = useThemePreference();
+  const themeContext = useThemePreference();
+  const isDark = themeContext?.isDark ?? false;
   const handleBack = () => {
     if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
       navigation.goBack();

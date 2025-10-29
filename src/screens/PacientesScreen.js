@@ -10,7 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemePreference } from '../contexts/ThemeContext';
 
 const PacientesScreen = ({ navigation }) => {
-  const { isDark } = useThemePreference();
+  const themeContext = useThemePreference();
+  const isDark = themeContext?.isDark ?? false;
 
   const pacientes = [
     {

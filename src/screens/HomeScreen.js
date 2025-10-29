@@ -11,7 +11,8 @@ import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 
 const HomeScreen = ({ navigation }) => {
-  const { isDark } = useThemePreference();
+  const themeContext = useThemePreference();
+  const isDark = themeContext?.isDark ?? false;
   const { userType, logout } = useAuth();
 
   const menuItems = [

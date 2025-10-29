@@ -45,7 +45,8 @@ export default function App() {
 };
 
 const AppInner = () => {
-  const { isDark } = useThemePreference();
+  const themeContext = useThemePreference();
+  const isDark = themeContext?.isDark ?? false;
   return (
     <View style={{ flex: 1, backgroundColor: isDark ? '#000' : '#fff' }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />

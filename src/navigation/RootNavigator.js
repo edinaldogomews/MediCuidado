@@ -132,7 +132,8 @@ const CuidadorTabNavigator = ({ navigation }) => {
 };
 
 const RootNavigator = () => {
-  const { isDark } = useThemePreference();
+  const themeContext = useThemePreference();
+  const isDark = themeContext?.isDark ?? false;
   const navTheme = isDark ? DarkTheme : DefaultTheme;
   const { userType, isLoading } = useAuth();
 

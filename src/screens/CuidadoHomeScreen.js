@@ -11,7 +11,8 @@ import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 
 const CuidadoHomeScreen = ({ navigation }) => {
-  const { isDark } = useThemePreference();
+  const themeContext = useThemePreference();
+  const isDark = themeContext?.isDark ?? false;
   const { logout } = useAuth();
 
   // Dados simulados de medicamentos para o idoso

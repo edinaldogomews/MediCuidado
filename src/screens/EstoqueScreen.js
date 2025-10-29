@@ -15,7 +15,8 @@ import { useThemePreference } from '../contexts/ThemeContext';
 import databaseService from '../database/DatabaseService';
 
 const EstoqueScreen = ({ navigation }) => {
-  const { isDark } = useThemePreference();
+  const themeContext = useThemePreference();
+  const isDark = themeContext?.isDark ?? false;
   const [estoque, setEstoque] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMedicamento, setSelectedMedicamento] = useState(null);
