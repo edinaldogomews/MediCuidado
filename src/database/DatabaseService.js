@@ -7,31 +7,60 @@ class DatabaseService {
   constructor() {
     this.db = null;
     this.isInitialized = false;
+    this.initPromise = null;
   }
 
   /**
    * Inicializa o banco de dados e cria as tabelas
    */
   async init() {
-    if (this.isInitialized) {
+    // Se já está inicializado, retorna
+    if (this.isInitialized && this.db) {
       return;
     }
 
-    try {
-      // Abre ou cria o banco de dados
-      this.db = await SQLite.openDatabaseAsync('medicuidado.db');
-      
-      // Cria as tabelas
-      await this.createTables();
-      
-      // Insere dados iniciais se necessário
-      await this.insertInitialData();
-      
-      this.isInitialized = true;
-      console.log('✅ Banco de dados inicializado com sucesso!');
-    } catch (error) {
-      console.error('❌ Erro ao inicializar banco de dados:', error);
-      throw error;
+    // Se já está inicializando, aguarda a promise existente
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    // Cria uma nova promise de inicialização
+    this.initPromise = (async () => {
+      try {
+        console.log('🔄 Inicializando banco de dados...');
+
+        // Abre ou cria o banco de dados
+        this.db = await SQLite.openDatabaseAsync('medicuidado.db');
+
+        // Cria as tabelas
+        await this.createTables();
+
+        // Insere dados iniciais se necessário
+        await this.insertInitialData();
+
+        this.isInitialized = true;
+        console.log('✅ Banco de dados inicializado com sucesso!');
+      } catch (error) {
+        console.error('❌ Erro ao inicializar banco de dados:', error);
+        this.isInitialized = false;
+        this.db = null;
+        this.initPromise = null;
+        throw error;
+      }
+    })();
+
+    return this.initPromise;
+  }
+
+  /**
+   * Garante que o banco está inicializado
+   */
+  async ensureInitialized() {
+    if (!this.db || !this.isInitialized) {
+      await this.init();
+    }
+    if (!this.db) {
+      throw new Error('Banco de dados não inicializado');
     }
   }
 
@@ -40,7 +69,7 @@ class DatabaseService {
    */
   async createTables() {
     try {
-      // Tabela de medicamentos
+      // Cria todas as tabelas em um único execAsync
       await this.db.execAsync(`
         CREATE TABLE IF NOT EXISTS medicamentos (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,10 +83,7 @@ class DatabaseService {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         );
-      `);
 
-      // Tabela de estoque
-      await this.db.execAsync(`
         CREATE TABLE IF NOT EXISTS estoque (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           medicamento_id INTEGER NOT NULL,
@@ -72,10 +98,7 @@ class DatabaseService {
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id) ON DELETE CASCADE
         );
-      `);
 
-      // Tabela de movimentações
-      await this.db.execAsync(`
         CREATE TABLE IF NOT EXISTS movimentacoes (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           medicamento_id INTEGER NOT NULL,
@@ -87,10 +110,7 @@ class DatabaseService {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id) ON DELETE CASCADE
         );
-      `);
 
-      // Tabela de alertas
-      await this.db.execAsync(`
         CREATE TABLE IF NOT EXISTS alertas (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           medicamento_id INTEGER,
@@ -101,10 +121,7 @@ class DatabaseService {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id) ON DELETE CASCADE
         );
-      `);
 
-      // Tabela de alarmes
-      await this.db.execAsync(`
         CREATE TABLE IF NOT EXISTS alarmes (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           medicamento_id INTEGER NOT NULL,
@@ -118,7 +135,7 @@ class DatabaseService {
         );
       `);
 
-      console.log('✅ Tabelas criadas com sucesso!');
+      // Log removido para evitar duplicação
     } catch (error) {
       console.error('❌ Erro ao criar tabelas:', error);
       throw error;
@@ -132,9 +149,9 @@ class DatabaseService {
     try {
       // Verifica se já existem medicamentos
       const result = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM medicamentos');
-      
-      if (result.count > 0) {
-        console.log('ℹ️ Dados já existem no banco de dados');
+
+      if (result && result.count > 0) {
+        // Dados já existem, não precisa inserir novamente
         return;
       }
 
@@ -208,7 +225,7 @@ class DatabaseService {
         [4, '20:00', JSON.stringify({segunda: true, terca: true, quarta: true, quinta: true, sexta: true, sabado: true, domingo: true}), 1, 'Tomar antes de dormir']
       );
 
-      console.log('✅ Dados iniciais inseridos com sucesso!');
+      // Log removido para evitar duplicação
     } catch (error) {
       console.error('❌ Erro ao inserir dados iniciais:', error);
       throw error;
@@ -498,7 +515,7 @@ class DatabaseService {
    * Busca medicamentos com estoque e alarmes
    */
   async getMedicamentosCompletos() {
-    await this.init();
+    await this.ensureInitialized();
     const medicamentos = await this.getAllMedicamentos();
 
     for (const med of medicamentos) {

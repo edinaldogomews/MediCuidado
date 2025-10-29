@@ -52,6 +52,12 @@ const MedicamentosScreen = ({ navigation }) => {
       setMedicamentos(medicamentosFormatados);
     } catch (error) {
       console.error('Erro ao carregar medicamentos:', error);
+      Alert.alert(
+        'Erro',
+        'Não foi possível carregar os medicamentos. Tente novamente.',
+        [{ text: 'OK' }]
+      );
+      setMedicamentos([]);
     }
   };
 
