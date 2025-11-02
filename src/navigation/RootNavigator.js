@@ -15,14 +15,16 @@ import CuidadoHomeScreen from '../screens/CuidadoHomeScreen';
 // Telas específicas
 import MedicamentosScreen from '../screens/MedicamentosScreen';
 import AddMedicamentoScreen from '../screens/AddMedicamentoScreen';
+import EditMedicamentoScreen from '../screens/EditMedicamentoScreen';
 import AlarmesScreen from '../screens/AlarmesScreen';
+import AddAlarmeScreen from '../screens/AddAlarmeScreen';
+import EditAlarmeScreen from '../screens/EditAlarmeScreen';
 import EstoqueScreen from '../screens/EstoqueScreen';
 import HistoricoScreen from '../screens/HistoricoScreen';
 import ConfiguracoesScreen from '../screens/ConfiguracoesScreen';
 import AjudaScreen from '../screens/AjudaScreen';
 import NotificacoesScreen from '../screens/NotificacoesScreen';
 import PerfilScreen from '../screens/PerfilScreen';
-import EditMedicamentoScreen from '../screens/EditMedicamentoScreen';
 import PacientesScreen from '../screens/PacientesScreen';
 
 
@@ -157,13 +159,15 @@ const RootNavigator = () => {
             <Stack.Screen name="AlarmesTab" component={AlarmesScreen} />
             <Stack.Screen name="PacientesTab" component={PacientesScreen} />
             <Stack.Screen name="AddMedicamento" component={AddMedicamentoScreen} />
+            <Stack.Screen name="EditMedicamento" component={EditMedicamentoScreen} />
+            <Stack.Screen name="AddAlarme" component={AddAlarmeScreen} />
+            <Stack.Screen name="EditAlarme" component={EditAlarmeScreen} />
             <Stack.Screen name="Estoque" component={EstoqueScreen} />
             <Stack.Screen name="Historico" component={HistoricoScreen} />
             <Stack.Screen name="Configuracoes" component={ConfiguracoesScreen} />
             <Stack.Screen name="Ajuda" component={AjudaScreen} />
             <Stack.Screen name="Notificacoes" component={NotificacoesScreen} />
             <Stack.Screen name="Perfil" component={PerfilScreen} />
-            <Stack.Screen name="EditMedicamento" component={EditMedicamentoScreen} />
           </>
         ) : (
           // Interface simplificada para idosos

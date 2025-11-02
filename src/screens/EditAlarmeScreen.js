@@ -8,10 +8,11 @@ import {
   ScrollView,
   Alert,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemePreference } from '../contexts/ThemeContext';
-import { StorageService } from '../services/StorageService';
+import databaseService from '../database/DatabaseService';
 
 const EditAlarmeScreen = ({ navigation, route }) => {
   const { isDark } = useThemePreference();
@@ -63,20 +64,36 @@ const EditAlarmeScreen = ({ navigation, route }) => {
   const carregarDados = async () => {
     try {
       setLoading(true);
-      
+
+      console.log('📥 Carregando alarme ID:', alarmeId);
+
       // Load medications
-      const medicamentosData = await StorageService.getMedicamentos();
-      setMedicamentos(medicamentosData || []);
-      
+      const medicamentosData = await databaseService.getAllMedicamentos();
+
+      // Formata para exibição
+      const medicamentosFormatados = medicamentosData.map(med => ({
+        id: med.id,
+        nome: `${med.nome} ${med.dosagem}`,
+        nomeOriginal: med.nome,
+        dosagem: med.dosagem
+      }));
+
+      console.log('📋 Medicamentos carregados:', medicamentosFormatados.map(m => ({ id: m.id, tipo: typeof m.id, nome: m.nome })));
+
+      setMedicamentos(medicamentosFormatados || []);
+
       // Load alarm data
-      const alarmesData = await StorageService.getAlarmes();
-      const alarme = alarmesData.find(a => a.id === alarmeId);
-      
+      const alarme = await databaseService.getAlarmeById(alarmeId);
+
+      console.log('📋 Alarme carregado:', alarme);
+
       if (alarme) {
+        console.log('🔍 medicamento_id do alarme:', alarme.medicamento_id, 'tipo:', typeof alarme.medicamento_id);
+
         setFormData({
-          medicamentoId: alarme.medicamentoId || '',
+          medicamentoId: alarme.medicamento_id || '',
           horario: alarme.horario || '',
-          dias: alarme.dias || {
+          dias: alarme.dias_semana || {
             segunda: false,
             terca: false,
             quarta: false,
@@ -86,13 +103,18 @@ const EditAlarmeScreen = ({ navigation, route }) => {
             domingo: false,
           },
         });
+
+        console.log('✅ FormData setado:', {
+          medicamentoId: alarme.medicamento_id,
+          horario: alarme.horario
+        });
       } else {
         Alert.alert('Erro', 'Alarme não encontrado');
         navigation.goBack();
       }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
-      Alert.alert('Erro', 'Erro ao carregar dados do alarme');
+      Alert.alert('Erro', 'Erro ao carregar dados do alarme: ' + error.message);
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -117,7 +139,16 @@ const EditAlarmeScreen = ({ navigation, route }) => {
   };
 
   const getSelectedMedicamentoName = () => {
+    if (!formData.medicamentoId) {
+      return 'Selecione um medicamento';
+    }
+
     const medicamento = medicamentos.find(m => m.id === formData.medicamentoId);
+
+    console.log('🔍 Procurando medicamento ID:', formData.medicamentoId);
+    console.log('📋 Medicamentos disponíveis:', medicamentos.map(m => ({ id: m.id, nome: m.nome })));
+    console.log('✅ Medicamento encontrado:', medicamento);
+
     return medicamento ? medicamento.nome : 'Selecione um medicamento';
   };
 
@@ -143,6 +174,13 @@ const EditAlarmeScreen = ({ navigation, route }) => {
       return;
     }
 
+    // Valida formato do horário (HH:MM)
+    const horarioRegex = /^([0-1][0-9]|2[0-3]):([0-5][0-9])$/;
+    if (!horarioRegex.test(formData.horario)) {
+      Alert.alert('Erro', 'Horário inválido. Use o formato HH:MM (ex: 08:00)');
+      return;
+    }
+
     // Check if at least one day is selected
     const diasSelecionados = Object.values(formData.dias).some(dia => dia);
     if (!diasSelecionados) {
@@ -151,22 +189,23 @@ const EditAlarmeScreen = ({ navigation, route }) => {
     }
 
     try {
-      // Update the alarm using the new method
-      const updates = {
-        medicamentoId: formData.medicamentoId,
+      const alarmeAtualizado = {
+        medicamento_id: formData.medicamentoId,
         horario: formData.horario,
-        dias: formData.dias,
-        dataAtualizacao: new Date().toISOString()
+        dias_semana: formData.dias,
+        observacoes: ''
       };
 
-      await StorageService.updateAlarme(alarmeId, updates);
-      
+      console.log('💾 Atualizando alarme:', alarmeId, alarmeAtualizado);
+
+      await databaseService.updateAlarme(alarmeId, alarmeAtualizado);
+
       Alert.alert('Sucesso', 'Alarme atualizado com sucesso!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
       console.error('Erro ao salvar alarme:', error);
-      Alert.alert('Erro', 'Erro ao atualizar alarme');
+      Alert.alert('Erro', 'Erro ao atualizar alarme: ' + error.message);
     }
   };
 
@@ -184,8 +223,9 @@ const EditAlarmeScreen = ({ navigation, route }) => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
         <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FF9800" />
           <Text style={[styles.loadingText, { color: isDark ? '#fff' : '#333' }]}>
-            Carregando...
+            Carregando alarme...
           </Text>
         </View>
       </SafeAreaView>

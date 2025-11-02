@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemePreference } from '../contexts/ThemeContext';
-import { StorageService } from '../services/StorageService';
+import databaseService from '../database/DatabaseService';
 
 const AddAlarmeScreen = ({ navigation }) => {
   const { isDark } = useThemePreference();
@@ -59,11 +59,20 @@ const AddAlarmeScreen = ({ navigation }) => {
 
   const carregarMedicamentos = async () => {
     try {
-      const medicamentosData = await StorageService.getMedicamentos();
-      setMedicamentos(medicamentosData || []);
+      const medicamentosData = await databaseService.getAllMedicamentos();
+
+      // Formata para exibição
+      const medicamentosFormatados = medicamentosData.map(med => ({
+        id: med.id,
+        nome: `${med.nome} ${med.dosagem}`,
+        nomeOriginal: med.nome,
+        dosagem: med.dosagem
+      }));
+
+      setMedicamentos(medicamentosFormatados || []);
     } catch (error) {
       console.error('Erro ao carregar medicamentos:', error);
-      setMedicamentos([]); // Ensure medicamentos is always an array
+      setMedicamentos([]);
     }
   };
 
@@ -111,6 +120,13 @@ const AddAlarmeScreen = ({ navigation }) => {
       return;
     }
 
+    // Valida formato do horário (HH:MM)
+    const horarioRegex = /^([0-1][0-9]|2[0-3]):([0-5][0-9])$/;
+    if (!horarioRegex.test(formData.horario)) {
+      Alert.alert('Erro', 'Horário inválido. Use o formato HH:MM (ex: 08:00)');
+      return;
+    }
+
     // Check if at least one day is selected
     const diasSelecionados = Object.values(formData.dias).some(dia => dia);
     if (!diasSelecionados) {
@@ -120,22 +136,23 @@ const AddAlarmeScreen = ({ navigation }) => {
 
     try {
       const novoAlarme = {
-        id: Date.now().toString(),
-        medicamentoId: formData.medicamentoId,
+        medicamento_id: formData.medicamentoId,
         horario: formData.horario,
-        status: 'pendente',
-        dias: formData.dias,
-        dataCriacao: new Date().toISOString(),
-        dataAtualizacao: new Date().toISOString()
+        dias_semana: formData.dias,
+        ativo: 1,
+        observacoes: ''
       };
 
-      await StorageService.saveAlarme(novoAlarme);
+      console.log('📝 Salvando alarme:', novoAlarme);
+
+      await databaseService.addAlarme(novoAlarme);
+
       Alert.alert('Sucesso', 'Alarme criado com sucesso!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     } catch (error) {
       console.error('Erro ao salvar alarme:', error);
-      Alert.alert('Erro', 'Erro ao salvar alarme');
+      Alert.alert('Erro', 'Erro ao salvar alarme: ' + error.message);
     }
   };
 

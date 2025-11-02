@@ -152,24 +152,47 @@ const MedicamentosScreen = ({ navigation }) => {
     );
   };
 
-  // Lista de categorias únicas
+  // Lista de categorias únicas (normalizadas e ordenadas)
   const categorias = React.useMemo(() => {
     if (!Array.isArray(medicamentos)) return ['Todos'];
-    const cats = medicamentos.map(m => m.tipo).filter(Boolean);
+
+    // Função para normalizar: primeira letra maiúscula, resto minúsculo
+    const normalizar = (texto) => {
+      if (!texto) return '';
+      return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
+    };
+
+    // Pega todas as categorias, normaliza e remove duplicatas
+    const cats = medicamentos
+      .map(m => normalizar(m.tipo))
+      .filter(Boolean);
+
     const uniqueCats = [...new Set(cats)];
+
+    // Ordena alfabeticamente
+    uniqueCats.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
     return ['Todos', ...uniqueCats];
   }, [medicamentos]);
 
   const filteredMedicamentos = React.useMemo(() => {
     if (!Array.isArray(medicamentos)) return [];
+
+    // Função para normalizar: primeira letra maiúscula, resto minúsculo
+    const normalizar = (texto) => {
+      if (!texto) return '';
+      return texto.charAt(0).toUpperCase() + texto.slice(1).toLowerCase();
+    };
+
     return medicamentos.filter(med => {
       if (!med || !med.nome) return false;
 
       // Filtro por busca
       const matchBusca = med.nome.toLowerCase().includes(searchQuery.toLowerCase());
 
-      // Filtro por categoria
-      const matchCategoria = categoriaFiltro === 'Todos' || med.tipo === categoriaFiltro;
+      // Filtro por categoria (normalizado)
+      const categoriaNormalizada = normalizar(med.tipo);
+      const matchCategoria = categoriaFiltro === 'Todos' || categoriaNormalizada === categoriaFiltro;
 
       return matchBusca && matchCategoria;
     });
