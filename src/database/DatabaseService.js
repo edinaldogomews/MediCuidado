@@ -239,18 +239,44 @@ class DatabaseService {
     return await this.db.getAllAsync('SELECT * FROM medicamentos WHERE ativo = 1 ORDER BY nome');
   }
 
+  async medicamentoExiste(nome, dosagem) {
+    await this.ensureInitialized();
+    const result = await this.db.getFirstAsync(
+      'SELECT id FROM medicamentos WHERE LOWER(nome) = LOWER(?) AND LOWER(dosagem) = LOWER(?) AND ativo = 1',
+      [nome, dosagem]
+    );
+    return result !== null;
+  }
+
   async getMedicamentoById(id) {
     await this.init();
     return await this.db.getFirstAsync('SELECT * FROM medicamentos WHERE id = ?', [id]);
   }
 
   async addMedicamento(medicamento) {
-    await this.init();
+    await this.ensureInitialized();
+
+    const params = [
+      medicamento.nome,
+      medicamento.descricao || '',
+      medicamento.dosagem,
+      medicamento.fabricante || '',
+      medicamento.preco || 0,
+      medicamento.categoria || 'Medicamento'
+    ];
+
+    console.log('🔍 addMedicamento params:', params);
+    console.log('🔍 addMedicamento types:', params.map(p => typeof p));
+
     const result = await this.db.runAsync(
       'INSERT INTO medicamentos (nome, descricao, dosagem, fabricante, preco, categoria) VALUES (?, ?, ?, ?, ?, ?)',
-      [medicamento.nome, medicamento.descricao, medicamento.dosagem, medicamento.fabricante, medicamento.preco, medicamento.categoria]
+      params
     );
-    return await this.getMedicamentoById(result.lastInsertRowId);
+
+    console.log('✅ Medicamento inserido com ID:', result.lastInsertRowId);
+
+    // Retorna apenas o ID, não busca o medicamento completo
+    return result.lastInsertRowId;
   }
 
   async updateMedicamento(id, dados) {
@@ -303,12 +329,31 @@ class DatabaseService {
   }
 
   async addEstoque(estoque) {
-    await this.init();
+    await this.ensureInitialized();
+
+    const params = [
+      estoque.medicamento_id,
+      estoque.quantidade,
+      estoque.minimo,
+      estoque.maximo,
+      estoque.vencimento || '',
+      estoque.status || 'normal',
+      estoque.lote || '',
+      estoque.data_entrada
+    ];
+
+    console.log('🔍 addEstoque params:', params);
+    console.log('🔍 addEstoque types:', params.map(p => typeof p));
+
     const result = await this.db.runAsync(
       'INSERT INTO estoque (medicamento_id, quantidade, minimo, maximo, vencimento, status, lote, data_entrada) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [estoque.medicamento_id, estoque.quantidade, estoque.minimo, estoque.maximo, estoque.vencimento, estoque.status, estoque.lote, estoque.data_entrada]
+      params
     );
-    return await this.getEstoqueById(result.lastInsertRowId);
+
+    console.log('✅ Estoque inserido com ID:', result.lastInsertRowId);
+
+    // Retorna apenas o ID, não busca o estoque completo
+    return result.lastInsertRowId;
   }
 
   async updateEstoque(id, dados) {
@@ -329,6 +374,28 @@ class DatabaseService {
     );
 
     return await this.getEstoqueById(id);
+  }
+
+  async updateEstoqueByMedicamentoId(medicamentoId, dados) {
+    await this.init();
+    const estoque = await this.getEstoqueByMedicamentoId(medicamentoId);
+
+    if (!estoque) {
+      // Se não existe estoque, cria um novo
+      return await this.addEstoque({
+        medicamento_id: medicamentoId,
+        quantidade: dados.quantidade || 0,
+        minimo: dados.minimo || 10,
+        maximo: dados.maximo || 100,
+        vencimento: dados.vencimento || null,
+        status: dados.status || 'normal',
+        lote: dados.lote || null,
+        data_entrada: dados.data_entrada || new Date().toISOString().split('T')[0],
+      });
+    }
+
+    // Se existe, atualiza
+    return await this.updateEstoque(estoque.id, dados);
   }
 
   async adicionarQuantidade(medicamentoId, quantidade) {
@@ -445,6 +512,20 @@ class DatabaseService {
     }));
   }
 
+  async getAlarmesByMedicamentoId(medicamentoId) {
+    await this.init();
+    const alarmes = await this.db.getAllAsync(`
+      SELECT * FROM alarmes
+      WHERE medicamento_id = ?
+      ORDER BY horario
+    `, [medicamentoId]);
+
+    return alarmes.map(alarme => ({
+      ...alarme,
+      dias_semana: JSON.parse(alarme.dias_semana)
+    }));
+  }
+
   async getAlarmeById(id) {
     await this.init();
     const alarme = await this.db.getFirstAsync(`
@@ -461,13 +542,40 @@ class DatabaseService {
   }
 
   async addAlarme(alarme) {
-    await this.init();
-    const diasSemanaJson = JSON.stringify(alarme.dias_semana);
+    await this.ensureInitialized();
+
+    console.log('🔍 addAlarme recebeu:', alarme);
+
+    // Converte dias_semana para JSON se for objeto
+    let diasSemanaJson;
+    if (typeof alarme.dias_semana === 'string') {
+      diasSemanaJson = alarme.dias_semana;
+    } else if (typeof alarme.dias_semana === 'object' && alarme.dias_semana !== null) {
+      diasSemanaJson = JSON.stringify(alarme.dias_semana);
+    } else {
+      diasSemanaJson = '{}';
+    }
+
+    const params = [
+      alarme.medicamento_id,
+      alarme.horario,
+      diasSemanaJson,
+      alarme.ativo !== undefined ? alarme.ativo : 1,
+      alarme.observacoes || ''
+    ];
+
+    console.log('🔍 Parâmetros para INSERT:', params);
+    console.log('🔍 Tipos:', params.map(p => typeof p));
+
     const result = await this.db.runAsync(
       'INSERT INTO alarmes (medicamento_id, horario, dias_semana, ativo, observacoes) VALUES (?, ?, ?, ?, ?)',
-      [alarme.medicamento_id, alarme.horario, diasSemanaJson, alarme.ativo !== undefined ? alarme.ativo : 1, alarme.observacoes || '']
+      params
     );
-    return await this.getAlarmeById(result.lastInsertRowId);
+
+    console.log('✅ Alarme inserido com ID:', result.lastInsertRowId);
+
+    // Retorna apenas o ID, não busca o alarme completo
+    return result.lastInsertRowId;
   }
 
   async updateAlarme(id, dados) {

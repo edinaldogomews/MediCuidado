@@ -7,6 +7,8 @@ import {
   FlatList,
   TextInput,
   Alert,
+  ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,6 +21,7 @@ const MedicamentosScreen = ({ navigation }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [medicamentos, setMedicamentos] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [categoriaFiltro, setCategoriaFiltro] = useState('Todos'); // Filtro por categoria
 
   useEffect(() => {
     carregarMedicamentos();
@@ -26,6 +29,7 @@ const MedicamentosScreen = ({ navigation }) => {
 
   useFocusEffect(
     React.useCallback(() => {
+      console.log('🔄 Tela de Medicamentos focada - Recarregando lista...');
       carregarMedicamentos();
     }, [])
   );
@@ -42,11 +46,32 @@ const MedicamentosScreen = ({ navigation }) => {
 
       const medicamentosData = await databaseService.getMedicamentosCompletos();
 
+      console.log(`📋 Carregados ${medicamentosData.length} medicamentos do banco`);
+
       // Formata os medicamentos para exibição
       const medicamentosFormatados = medicamentosData.map(med => {
         const estoque = med.estoque ? med.estoque.quantidade : 0;
+        const estoqueMinimo = med.estoque ? med.estoque.minimo : 10;
         const alarmes = med.alarmes || [];
         const horarios = alarmes.map(a => a.horario);
+
+        // Verifica se o estoque está zerado ou baixo
+        const estoqueZerado = estoque === 0;
+        const estoqueBaixo = estoque > 0 && estoque <= estoqueMinimo;
+
+        // Calcula o intervalo entre horários (se houver)
+        let intervaloTexto = '';
+        if (horarios.length > 1) {
+          // Calcula diferença entre primeiro e segundo horário
+          const [h1, m1] = horarios[0].split(':').map(Number);
+          const [h2, m2] = horarios[1].split(':').map(Number);
+          const diffMinutos = (h2 * 60 + m2) - (h1 * 60 + m1);
+          const diffHoras = diffMinutos / 60;
+
+          intervaloTexto = `${horarios.length}x ao dia (a cada ${diffHoras}h)`;
+        } else if (horarios.length === 1) {
+          intervaloTexto = `1x ao dia (${horarios[0]})`;
+        }
 
         return {
           id: med.id,
@@ -54,12 +79,17 @@ const MedicamentosScreen = ({ navigation }) => {
           tipo: med.categoria || 'Medicamento',
           dosagem: med.dosagem,
           estoque: estoque,
+          estoqueMinimo: estoqueMinimo,
+          estoqueZerado: estoqueZerado,
+          estoqueBaixo: estoqueBaixo,
           proximaData: alarmes.length > 0 ? new Date().toISOString().split('T')[0] : '-',
-          horarios: horarios.length > 0 ? horarios : ['-']
+          horarios: horarios.length > 0 ? horarios : [],
+          intervaloTexto: intervaloTexto
         };
       });
 
       setMedicamentos(medicamentosFormatados);
+      console.log(`✅ Lista atualizada com ${medicamentosFormatados.length} medicamentos`);
     } catch (error) {
       console.error('Erro ao carregar medicamentos:', error);
       Alert.alert(
@@ -122,32 +152,86 @@ const MedicamentosScreen = ({ navigation }) => {
     );
   };
 
+  // Lista de categorias únicas
+  const categorias = React.useMemo(() => {
+    if (!Array.isArray(medicamentos)) return ['Todos'];
+    const cats = medicamentos.map(m => m.tipo).filter(Boolean);
+    const uniqueCats = [...new Set(cats)];
+    return ['Todos', ...uniqueCats];
+  }, [medicamentos]);
+
   const filteredMedicamentos = React.useMemo(() => {
     if (!Array.isArray(medicamentos)) return [];
-    return medicamentos.filter(med =>
-      med && med.nome && med.nome.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [medicamentos, searchQuery]);
+    return medicamentos.filter(med => {
+      if (!med || !med.nome) return false;
+
+      // Filtro por busca
+      const matchBusca = med.nome.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // Filtro por categoria
+      const matchCategoria = categoriaFiltro === 'Todos' || med.tipo === categoriaFiltro;
+
+      return matchBusca && matchCategoria;
+    });
+  }, [medicamentos, searchQuery, categoriaFiltro]);
 
   const renderMedicamento = ({ item }) => {
     if (!item) return null;
 
+    // Define cor e texto do estoque
+    let estoqueColor = isDark ? '#bbb' : '#555';
+    let estoqueTexto = `📦 Estoque: ${item.estoque} unidades`;
+    let estoqueIcon = '';
+
+    if (item.estoqueZerado) {
+      estoqueColor = '#D32F2F'; // Vermelho mais escuro
+      estoqueTexto = `📦 Estoque: ${item.estoque} unidades`;
+      estoqueIcon = '❌ SEM ESTOQUE!';
+    } else if (item.estoqueBaixo) {
+      estoqueColor = '#F44336'; // Vermelho normal
+      estoqueTexto = `📦 Estoque: ${item.estoque} unidades`;
+      estoqueIcon = '⚠️ BAIXO!';
+    }
+
     return (
     <View style={[
       styles.medicamentoCard,
-      { backgroundColor: isDark ? '#1e1e1e' : '#fff' }
+      { backgroundColor: isDark ? '#1e1e1e' : '#fff' },
+      item.estoqueZerado && styles.medicamentoCardSemEstoque,
+      item.estoqueBaixo && styles.medicamentoCardAlerta
     ]}>
       <View style={styles.medicamentoHeader}>
-        <Text style={[styles.medicamentoNome, { color: isDark ? '#ddd' : '#333' }]}>{item.nome}</Text>
+        <View style={styles.medicamentoNomeContainer}>
+          <Text style={[styles.medicamentoNome, { color: isDark ? '#ddd' : '#333' }]}>
+            {item.nome} {item.dosagem}
+          </Text>
+          {item.estoqueZerado && (
+            <Text style={styles.alertaIconCritico}>❌</Text>
+          )}
+          {item.estoqueBaixo && !item.estoqueZerado && (
+            <Text style={styles.alertaIcon}>⚠️</Text>
+          )}
+        </View>
         <Text style={[styles.medicamentoTipo, { color: isDark ? '#bbb' : '#666' }]}>{item.tipo}</Text>
       </View>
 
       <View style={styles.medicamentoDetails}>
-        <Text style={[styles.detailText, { color: isDark ? '#bbb' : '#555' }]}>📦 Estoque: {item.estoque} unidades</Text>
-        <Text style={[styles.detailText, { color: isDark ? '#bbb' : '#555' }]}>📅 Próxima dose: {item.proximaData}</Text>
-        <Text style={[styles.detailText, { color: isDark ? '#bbb' : '#555' }]}>
-          ⏰ Horários: {item.horarios.join(', ')}
+        <Text style={[
+          styles.detailText,
+          { color: estoqueColor },
+          (item.estoqueBaixo || item.estoqueZerado) && styles.detailTextBold
+        ]}>
+          {estoqueTexto} {estoqueIcon}
         </Text>
+        {item.intervaloTexto ? (
+          <Text style={[styles.detailText, { color: isDark ? '#bbb' : '#555' }]}>
+            ⏰ {item.intervaloTexto}
+          </Text>
+        ) : (
+          <Text style={[styles.detailText, { color: isDark ? '#888' : '#999', fontStyle: 'italic' }]}>
+            ⏰ Sem horários configurados
+          </Text>
+        )}
       </View>
 
       <View style={styles.medicamentoActions}>
@@ -195,15 +279,88 @@ const MedicamentosScreen = ({ navigation }) => {
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
+
+        {/* Contador de medicamentos */}
+        <Text style={[styles.contador, { color: isDark ? '#888' : '#666' }]}>
+          📊 {medicamentos.length} {medicamentos.length === 1 ? 'medicamento cadastrado' : 'medicamentos cadastrados'}
+        </Text>
       </View>
 
-      <FlatList
-        data={filteredMedicamentos}
-        keyExtractor={item => item.id.toString()}
-        renderItem={renderMedicamento}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* Filtro por categoria */}
+      {categorias.length > 1 && (
+        <View style={[styles.filtroContainer, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtroScroll}
+          >
+            {categorias.map(cat => (
+              <TouchableOpacity
+                key={cat}
+                style={[
+                  styles.filtroButton,
+                  categoriaFiltro === cat && styles.filtroButtonActive,
+                  { backgroundColor: categoriaFiltro === cat ? '#4CAF50' : (isDark ? '#2a2a2a' : '#f0f0f0') }
+                ]}
+                onPress={() => setCategoriaFiltro(cat)}
+              >
+                <Text style={[
+                  styles.filtroButtonText,
+                  { color: categoriaFiltro === cat ? '#fff' : (isDark ? '#ddd' : '#333') }
+                ]}>
+                  {cat}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Indicador de carregamento */}
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4CAF50" />
+          <Text style={[styles.loadingText, { color: isDark ? '#888' : '#666' }]}>
+            Carregando medicamentos...
+          </Text>
+        </View>
+      ) : filteredMedicamentos.length === 0 ? (
+        // Mensagem quando não há resultados
+        <View style={styles.emptyContainer}>
+          {medicamentos.length === 0 ? (
+            // Lista vazia
+            <>
+              <Text style={styles.emptyIcon}>📦</Text>
+              <Text style={[styles.emptyTitle, { color: isDark ? '#ddd' : '#333' }]}>
+                Nenhum medicamento cadastrado
+              </Text>
+              <Text style={[styles.emptySubtitle, { color: isDark ? '#888' : '#666' }]}>
+                Clique em "+ Adicionar" para cadastrar{'\n'}seu primeiro medicamento
+              </Text>
+            </>
+          ) : (
+            // Busca sem resultados
+            <>
+              <Text style={styles.emptyIcon}>🔍</Text>
+              <Text style={[styles.emptyTitle, { color: isDark ? '#ddd' : '#333' }]}>
+                Nenhum medicamento encontrado
+              </Text>
+              <Text style={[styles.emptySubtitle, { color: isDark ? '#888' : '#666' }]}>
+                Tente buscar por outro nome ou{'\n'}altere o filtro de categoria
+              </Text>
+            </>
+          )}
+        </View>
+      ) : (
+        // Lista de medicamentos
+        <FlatList
+          data={filteredMedicamentos}
+          keyExtractor={item => item.id.toString()}
+          renderItem={renderMedicamento}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -253,6 +410,70 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     fontSize: 16,
+    marginBottom: 10,
+  },
+  contador: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+  },
+  filtroContainer: {
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  filtroScroll: {
+    paddingHorizontal: 15,
+  },
+  filtroButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    marginRight: 8,
+  },
+  filtroButtonActive: {
+    backgroundColor: '#4CAF50',
+  },
+  filtroButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   list: {
     padding: 15,
@@ -268,14 +489,36 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
   },
+  medicamentoCardAlerta: {
+    borderWidth: 2,
+    borderColor: '#F44336',
+    backgroundColor: '#FFEBEE',
+  },
+  medicamentoCardSemEstoque: {
+    borderWidth: 3,
+    borderColor: '#D32F2F',
+    backgroundColor: '#FFCDD2',
+  },
   medicamentoHeader: {
     marginBottom: 10,
+  },
+  medicamentoNomeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
   },
   medicamentoNome: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 5,
+  },
+  alertaIcon: {
+    fontSize: 20,
+    marginLeft: 8,
+  },
+  alertaIconCritico: {
+    fontSize: 20,
+    marginLeft: 8,
   },
   medicamentoTipo: {
     fontSize: 14,
@@ -288,6 +531,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
     marginBottom: 3,
+  },
+  detailTextBold: {
+    fontWeight: 'bold',
   },
   medicamentoActions: {
     flexDirection: 'row',
