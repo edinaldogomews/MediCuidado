@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,13 @@ import {
   ScrollView,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PerfilScreen = ({ navigation }) => {
   const { isDark } = useThemePreference();
@@ -37,21 +40,63 @@ const PerfilScreen = ({ navigation }) => {
   const { userType, logout } = useAuth();
 
   const [editando, setEditando] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [perfil, setPerfil] = useState({
-    nome: 'Maria Silva',
-    idade: '72',
-    telefone: '(11) 99999-9999',
-    email: 'maria.silva@email.com',
-    endereco: 'Rua das Flores, 123 - São Paulo/SP',
-    contatoEmergencia: 'João Silva - (11) 88888-8888',
+    nome: '',
+    idade: '',
+    telefone: '',
+    email: '',
+    endereco: '',
+    contatoEmergencia: '',
   });
 
-  const salvarPerfil = () => {
-    Alert.alert(
-      'Sucesso',
-      'Perfil atualizado com sucesso!',
-      [{ text: 'OK', onPress: () => setEditando(false) }]
-    );
+  useEffect(() => {
+    carregarPerfil();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      carregarPerfil();
+    }, [])
+  );
+
+  const carregarPerfil = async () => {
+    try {
+      setIsLoading(true);
+      const perfilSalvo = await AsyncStorage.getItem('@medicuidado:perfil');
+      if (perfilSalvo) {
+        setPerfil(JSON.parse(perfilSalvo));
+      } else {
+        // Dados padrão se não houver perfil salvo
+        setPerfil({
+          nome: userType === 'idoso' ? 'Usuário Idoso' : 'Cuidador',
+          idade: '',
+          telefone: '',
+          email: '',
+          endereco: '',
+          contatoEmergencia: '',
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar perfil:', error);
+      Alert.alert('Erro', 'Não foi possível carregar o perfil');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const salvarPerfil = async () => {
+    try {
+      await AsyncStorage.setItem('@medicuidado:perfil', JSON.stringify(perfil));
+      Alert.alert(
+        'Sucesso',
+        'Perfil atualizado com sucesso!',
+        [{ text: 'OK', onPress: () => setEditando(false) }]
+      );
+    } catch (error) {
+      console.error('Erro ao salvar perfil:', error);
+      Alert.alert('Erro', 'Não foi possível salvar o perfil');
+    }
   };
 
   const confirmarLogout = () => {
@@ -80,6 +125,26 @@ const PerfilScreen = ({ navigation }) => {
       )}
     </View>
   );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Text style={styles.backButtonText}>← Voltar</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Meu Perfil</Text>
+          <View style={styles.editButton} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4A90E2" />
+          <Text style={[styles.loadingText, { color: isDark ? '#fff' : '#333' }]}>
+            Carregando perfil...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
@@ -184,6 +249,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
   header: {
     backgroundColor: '#673AB7',
