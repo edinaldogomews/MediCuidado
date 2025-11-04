@@ -5,6 +5,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  ActivityIndicator,
+  ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -35,7 +38,9 @@ const HistoricoScreen = ({ navigation }) => {
     }
   };
   const [filtroAtivo, setFiltroAtivo] = useState('todos');
+  const [filtroPeriodo, setFiltroPeriodo] = useState('todos'); // hoje, semana, mes, todos
   const [historico, setHistorico] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     carregarHistorico();
@@ -49,6 +54,7 @@ const HistoricoScreen = ({ navigation }) => {
 
   const carregarHistorico = async () => {
     try {
+      setIsLoading(true);
       const movimentacoes = await databaseService.getAllMovimentacoes();
 
       // Formata as movimentações para exibição
@@ -59,6 +65,7 @@ const HistoricoScreen = ({ navigation }) => {
           medicamento: medicamento ? `${medicamento.nome} ${medicamento.dosagem}` : 'Medicamento não encontrado',
           acao: mov.tipo, // 'entrada' ou 'saida'
           data: mov.data,
+          dataObj: new Date(mov.data), // Para filtros
           horario: mov.created_at ? new Date(mov.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
           quantidade: mov.quantidade,
           usuario: mov.usuario || 'Usuário',
@@ -66,9 +73,14 @@ const HistoricoScreen = ({ navigation }) => {
         };
       }));
 
+      // Ordena por data mais recente primeiro
+      historicoFormatado.sort((a, b) => b.dataObj - a.dataObj);
+
       setHistorico(historicoFormatado);
     } catch (error) {
       console.error('Erro ao carregar histórico:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -78,9 +90,54 @@ const HistoricoScreen = ({ navigation }) => {
     { key: 'saida', label: 'Saídas', color: '#F44336' },
   ];
 
-  const historicoFiltrado = filtroAtivo === 'todos'
+  const filtrosPeriodo = [
+    { key: 'todos', label: 'Todos' },
+    { key: 'hoje', label: 'Hoje' },
+    { key: 'semana', label: 'Semana' },
+    { key: 'mes', label: 'Mês' },
+  ];
+
+  // Filtra por tipo (entrada/saída)
+  let historicoFiltrado = filtroAtivo === 'todos'
     ? historico
     : historico.filter(item => item.acao === filtroAtivo);
+
+  // Filtra por período
+  if (filtroPeriodo !== 'todos') {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    if (filtroPeriodo === 'hoje') {
+      historicoFiltrado = historicoFiltrado.filter(item => {
+        const itemData = new Date(item.data);
+        itemData.setHours(0, 0, 0, 0);
+        return itemData.getTime() === hoje.getTime();
+      });
+    } else if (filtroPeriodo === 'semana') {
+      const semanaAtras = new Date(hoje);
+      semanaAtras.setDate(hoje.getDate() - 7);
+      historicoFiltrado = historicoFiltrado.filter(item => {
+        const itemData = new Date(item.data);
+        return itemData >= semanaAtras;
+      });
+    } else if (filtroPeriodo === 'mes') {
+      const mesAtras = new Date(hoje);
+      mesAtras.setMonth(hoje.getMonth() - 1);
+      historicoFiltrado = historicoFiltrado.filter(item => {
+        const itemData = new Date(item.data);
+        return itemData >= mesAtras;
+      });
+    }
+  }
+
+  // Estatísticas
+  const stats = React.useMemo(() => {
+    const entradas = historicoFiltrado.filter(item => item.acao === 'entrada').length;
+    const saidas = historicoFiltrado.filter(item => item.acao === 'saida').length;
+    const total = historicoFiltrado.length;
+
+    return { entradas, saidas, total };
+  }, [historicoFiltrado]);
 
   const getAcaoColor = (acao) => {
     switch (acao) {
@@ -107,17 +164,47 @@ const HistoricoScreen = ({ navigation }) => {
   };
 
   const renderItem = ({ item }) => (
-    <View style={styles.itemCard}>
+    <View style={[
+      styles.itemCard,
+      { backgroundColor: isDark ? '#1e1e1e' : '#fff' }
+    ]}>
       <View style={styles.acaoIcon}>
         <Text style={styles.iconText}>{getAcaoIcon(item.acao)}</Text>
       </View>
 
       <View style={styles.itemInfo}>
-        <Text style={styles.medicamentoNome}>{item.medicamento}</Text>
-        <Text style={styles.paciente}>👤 {item.usuario}</Text>
-        <Text style={styles.quantidade}>📦 Quantidade: {item.quantidade}</Text>
-        {item.motivo ? <Text style={styles.motivo}>💬 {item.motivo}</Text> : null}
-        <Text style={styles.dataHorario}>📅 {item.data} {item.horario ? `às ${item.horario}` : ''}</Text>
+        <Text style={[
+          styles.medicamentoNome,
+          { color: isDark ? '#ddd' : '#333' }
+        ]}>
+          {item.medicamento}
+        </Text>
+        <Text style={[
+          styles.paciente,
+          { color: isDark ? '#bbb' : '#555' }
+        ]}>
+          👤 {item.usuario}
+        </Text>
+        <Text style={[
+          styles.quantidade,
+          { color: isDark ? '#bbb' : '#555' }
+        ]}>
+          📦 Quantidade: {item.quantidade}
+        </Text>
+        {item.motivo ? (
+          <Text style={[
+            styles.motivo,
+            { color: isDark ? '#999' : '#666' }
+          ]}>
+            💬 {item.motivo}
+          </Text>
+        ) : null}
+        <Text style={[
+          styles.dataHorario,
+          { color: isDark ? '#888' : '#777' }
+        ]}>
+          📅 {item.data} {item.horario ? `às ${item.horario}` : ''}
+        </Text>
       </View>
 
       <View style={[styles.statusBadge, { backgroundColor: getAcaoColor(item.acao) }]}>
@@ -125,6 +212,26 @@ const HistoricoScreen = ({ navigation }) => {
       </View>
     </View>
   );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+            <Text style={styles.backButtonText}>← Voltar</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>Histórico</Text>
+          <View style={styles.exportButton} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#795548" />
+          <Text style={[styles.loadingText, { color: isDark ? '#fff' : '#333' }]}>
+            Carregando histórico...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
@@ -138,38 +245,82 @@ const HistoricoScreen = ({ navigation }) => {
         <Text style={styles.title}>Histórico</Text>
         <TouchableOpacity
           style={styles.exportButton}
-          onPress={() => console.log('Exportar histórico')}
+          onPress={() => Alert.alert('Relatório', 'Funcionalidade em desenvolvimento')}
         >
           <Text style={styles.exportButtonText}>📊 Relatório</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.filtrosContainer}>
-        {filtros.map(filtro => (
-          <TouchableOpacity
-            key={filtro.key}
-            style={[
-              styles.filtroButton,
-              { backgroundColor: isDark ? '#1e1e1e' : '#fff' },
-              filtroAtivo === filtro.key && { backgroundColor: filtro.color }
-            ]}
-            onPress={() => setFiltroAtivo(filtro.key)}
-          >
-            <Text style={[
-              styles.filtroText,
-              { color: isDark ? '#bbb' : '#666' },
-              filtroAtivo === filtro.key && { color: '#fff' }
-            ]}>
-              {filtro.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+      {/* Estatísticas */}
+      <View style={styles.statsCardsContainer}>
+        <View style={[styles.statCard, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.statNumber, { color: '#4CAF50' }]}>{stats.entradas}</Text>
+          <Text style={[styles.statLabel, { color: isDark ? '#bbb' : '#666' }]}>Entradas</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.statNumber, { color: '#F44336' }]}>{stats.saidas}</Text>
+          <Text style={[styles.statLabel, { color: isDark ? '#bbb' : '#666' }]}>Saídas</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+          <Text style={[styles.statNumber, { color: '#795548' }]}>{stats.total}</Text>
+          <Text style={[styles.statLabel, { color: isDark ? '#bbb' : '#666' }]}>Total</Text>
+        </View>
       </View>
 
-      <View style={styles.statsContainer}>
-        <Text style={[styles.statsText, { color: isDark ? '#bbb' : '#666' }]}>
-          {historicoFiltrado.length} registros encontrados
-        </Text>
+      {/* Filtro por Tipo */}
+      <View style={[styles.filtrosContainer, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+        <Text style={[styles.filtroLabel, { color: isDark ? '#bbb' : '#666' }]}>Tipo:</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtrosScroll}
+        >
+          {filtros.map(filtro => (
+            <TouchableOpacity
+              key={filtro.key}
+              style={[
+                styles.filtroButton,
+                { backgroundColor: filtroAtivo === filtro.key ? filtro.color : (isDark ? '#2a2a2a' : '#f0f0f0') }
+              ]}
+              onPress={() => setFiltroAtivo(filtro.key)}
+            >
+              <Text style={[
+                styles.filtroText,
+                { color: filtroAtivo === filtro.key ? '#fff' : (isDark ? '#bbb' : '#666') }
+              ]}>
+                {filtro.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Filtro por Período */}
+      <View style={[styles.filtrosContainer, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
+        <Text style={[styles.filtroLabel, { color: isDark ? '#bbb' : '#666' }]}>Período:</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtrosScroll}
+        >
+          {filtrosPeriodo.map(filtro => (
+            <TouchableOpacity
+              key={filtro.key}
+              style={[
+                styles.filtroButton,
+                { backgroundColor: filtroPeriodo === filtro.key ? '#795548' : (isDark ? '#2a2a2a' : '#f0f0f0') }
+              ]}
+              onPress={() => setFiltroPeriodo(filtro.key)}
+            >
+              <Text style={[
+                styles.filtroText,
+                { color: filtroPeriodo === filtro.key ? '#fff' : (isDark ? '#bbb' : '#666') }
+              ]}>
+                {filtro.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <FlatList
@@ -178,6 +329,17 @@ const HistoricoScreen = ({ navigation }) => {
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>📋</Text>
+            <Text style={[styles.emptyText, { color: isDark ? '#888' : '#666' }]}>
+              Nenhum registro encontrado
+            </Text>
+            <Text style={[styles.emptySubtext, { color: isDark ? '#666' : '#999' }]}>
+              As movimentações de estoque aparecerão aqui
+            </Text>
+          </View>
+        }
       />
     </SafeAreaView>
   );
@@ -187,6 +349,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
   header: {
     backgroundColor: '#795548',
@@ -219,30 +391,81 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
   },
-  filtrosContainer: {
+  statsCardsContainer: {
     flexDirection: 'row',
     padding: 15,
     gap: 10,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  filtrosContainer: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  filtroLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginRight: 10,
+  },
+  filtrosScroll: {
+    gap: 8,
   },
   filtroButton: {
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#fff',
-    elevation: 1,
+    backgroundColor: '#f0f0f0',
   },
   filtroText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
     color: '#666',
   },
-  statsContainer: {
-    paddingHorizontal: 15,
-    paddingBottom: 10,
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
   },
-  statsText: {
-    fontSize: 14,
+  emptyIcon: {
+    fontSize: 64,
+    marginBottom: 15,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#666',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
   },
   list: {
     padding: 15,
