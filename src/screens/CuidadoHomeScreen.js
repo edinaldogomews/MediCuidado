@@ -1,33 +1,180 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import databaseService from '../database/DatabaseService';
 
 const CuidadoHomeScreen = ({ navigation }) => {
   const themeContext = useThemePreference();
   const isDark = themeContext?.isDark ?? false;
   const { logout } = useAuth();
 
-  // Dados simulados de medicamentos para o idoso
-  const medicamentosHoje = [
-    { nome: 'Losartana 50mg', horario: '08:00', status: 'pendente' },
-    { nome: 'Metformina 850mg', horario: '12:00', status: 'tomado' },
-    { nome: 'Sinvastatina 20mg', horario: '20:00', status: 'pendente' },
-    { nome: 'Omeprazol 20mg', horario: '08:00', status: 'tomado' },
-  ];
+  const [medicamentosHoje, setMedicamentosHoje] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [alarmesTomados, setAlarmesTomados] = useState([]);
 
-  const proximoMedicamento = medicamentosHoje.find(med => med.status === 'pendente');
+  // Carregar alarmes do banco de dados
+  const carregarAlarmes = async () => {
+    try {
+      setIsLoading(true);
+      const alarmes = await databaseService.getAllAlarmes();
 
-  const marcarComoTomado = (medicamento) => {
-    console.log(`Medicamento ${medicamento.nome} marcado como tomado`);
+      // Filtrar alarmes de hoje
+      const hoje = new Date().toLocaleDateString('pt-BR', { weekday: 'short' });
+      const diasMap = {
+        'seg.': 'Seg',
+        'ter.': 'Ter',
+        'qua.': 'Qua',
+        'qui.': 'Qui',
+        'sex.': 'Sex',
+        'sáb.': 'Sáb',
+        'dom.': 'Dom'
+      };
+      const diaHoje = diasMap[hoje] || hoje;
+
+      const alarmesHoje = [];
+
+      for (const alarme of alarmes) {
+        if (!alarme.ativo) continue;
+
+        // Converte dias_semana para array (aceita objeto ou array)
+        let diasArray = [];
+
+        if (Array.isArray(alarme.dias_semana)) {
+          // Já é array: ["Seg", "Ter", ...]
+          diasArray = alarme.dias_semana;
+        } else if (typeof alarme.dias_semana === 'object' && alarme.dias_semana !== null) {
+          // É objeto: {segunda: true, terca: false, ...}
+          // Converte para array
+          const diasMap = {
+            'segunda': 'Seg',
+            'terca': 'Ter',
+            'quarta': 'Qua',
+            'quinta': 'Qui',
+            'sexta': 'Sex',
+            'sabado': 'Sáb',
+            'domingo': 'Dom'
+          };
+
+          diasArray = Object.keys(alarme.dias_semana)
+            .filter(dia => alarme.dias_semana[dia] === true)
+            .map(dia => diasMap[dia])
+            .filter(dia => dia !== undefined);
+        }
+
+        // Verifica se hoje está nos dias
+        if (!diasArray.includes(diaHoje)) continue;
+
+        // Buscar medicamento
+        const medicamento = await databaseService.getMedicamentoById(alarme.medicamento_id);
+        if (!medicamento) continue;
+
+        alarmesHoje.push({
+          id: alarme.id,
+          nome: `${medicamento.nome} ${medicamento.dosagem}`,
+          horario: alarme.horario,
+          medicamento_id: alarme.medicamento_id,
+        });
+      }
+
+      // Ordenar por horário
+      alarmesHoje.sort((a, b) => a.horario.localeCompare(b.horario));
+
+      setMedicamentosHoje(alarmesHoje);
+    } catch (error) {
+      console.error('Erro ao carregar alarmes:', error);
+      Alert.alert('Erro', 'Não foi possível carregar os medicamentos');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      carregarAlarmes();
+    }, [])
+  );
+
+  // Verificar se alarme foi tomado
+  const foiTomado = (alarmeId) => {
+    return alarmesTomados.includes(alarmeId);
+  };
+
+  // Marcar como tomado
+  const marcarComoTomado = async (alarme) => {
+    try {
+      // Adicionar à lista de tomados
+      setAlarmesTomados([...alarmesTomados, alarme.id]);
+
+      // Registrar saída no estoque
+      await databaseService.removerQuantidade(alarme.medicamento_id, 1);
+
+      // Registrar movimentação
+      await databaseService.addMovimentacao({
+        medicamento_id: alarme.medicamento_id,
+        tipo: 'saida',
+        quantidade: 1,
+        data: new Date().toISOString().split('T')[0],
+        usuario: 'Idoso',
+        motivo: 'Medicamento tomado'
+      });
+
+      Alert.alert('Sucesso', 'Medicamento marcado como tomado!');
+
+      // Recarregar alarmes
+      carregarAlarmes();
+    } catch (error) {
+      console.error('Erro ao marcar como tomado:', error);
+      Alert.alert('Erro', 'Não foi possível marcar como tomado');
+    }
+  };
+
+  // Próximo medicamento pendente
+  const proximoMedicamento = medicamentosHoje.find(med => !foiTomado(med.id));
+
+  // Ligar para emergência
+  const ligarEmergencia = () => {
+    Alert.alert(
+      'Ligar para Emergência?',
+      'Deseja ligar para 192 (SAMU)?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Ligar',
+          onPress: () => Linking.openURL('tel:192')
+        }
+      ]
+    );
+  };
+
+  // Loading
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Meus Medicamentos</Text>
+          <Text style={styles.subtitle}>Interface Simplificada</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2196F3" />
+          <Text style={[styles.loadingText, { color: isDark ? '#ddd' : '#666' }]}>
+            Carregando medicamentos...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#f5f5f5' }]}>
@@ -40,6 +187,7 @@ const CuidadoHomeScreen = ({ navigation }) => {
       </View>
 
       <ScrollView style={styles.content}>
+        {/* Próximo Medicamento */}
         {proximoMedicamento && (
           <View style={styles.proximoCard}>
             <Text style={styles.proximoTitle}>🔔 Próximo Medicamento</Text>
@@ -54,38 +202,77 @@ const CuidadoHomeScreen = ({ navigation }) => {
           </View>
         )}
 
-        <Text style={styles.sectionTitle}>Medicamentos de Hoje</Text>
+        {/* Medicamentos de Hoje */}
+        <Text style={[styles.sectionTitle, { color: isDark ? '#ddd' : '#333' }]}>
+          Medicamentos de Hoje
+        </Text>
 
-        {medicamentosHoje.map((med, index) => (
-          <View key={index} style={[styles.medicamentoCard, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
-            <View style={styles.medicamentoInfo}>
-              <Text style={[styles.medicamentoNome, { color: isDark ? '#ddd' : '#333' }]}>{med.nome}</Text>
-              <Text style={[styles.medicamentoHorario, { color: isDark ? '#bbb' : '#666' }]}>📅 {med.horario}</Text>
-            </View>
-            <View style={[
-              styles.statusBadge,
-              med.status === 'tomado' ? styles.statusTomado : styles.statusPendente
-            ]}>
-              <Text style={styles.statusText}>
-                {med.status === 'tomado' ? '✓ Tomado' : '⏰ Pendente'}
-              </Text>
-            </View>
+        {medicamentosHoje.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>💊</Text>
+            <Text style={[styles.emptyText, { color: isDark ? '#ddd' : '#666' }]}>
+              Nenhum medicamento para hoje
+            </Text>
+            <Text style={[styles.emptySubtext, { color: isDark ? '#bbb' : '#999' }]}>
+              Configure alarmes na tela de Alarmes
+            </Text>
           </View>
-        ))}
+        ) : (
+          medicamentosHoje.map((med) => {
+            const tomado = foiTomado(med.id);
+            return (
+              <View
+                key={med.id}
+                style={[
+                  styles.medicamentoCard,
+                  { backgroundColor: isDark ? '#1e1e1e' : '#fff' },
+                  tomado && styles.medicamentoTomado
+                ]}
+              >
+                <View style={styles.medicamentoInfo}>
+                  <Text style={[
+                    styles.medicamentoNome,
+                    { color: isDark ? '#ddd' : '#333' },
+                    tomado && styles.medicamentoNomeTomado
+                  ]}>
+                    {med.nome}
+                  </Text>
+                  <Text style={[styles.medicamentoHorario, { color: isDark ? '#bbb' : '#666' }]}>
+                    📅 {med.horario}
+                  </Text>
+                </View>
 
+                {tomado ? (
+                  <View style={[styles.statusBadge, styles.statusTomado]}>
+                    <Text style={styles.statusText}>✓ Tomado</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.statusBadge, styles.statusPendente]}
+                    onPress={() => marcarComoTomado(med)}
+                  >
+                    <Text style={styles.statusText}>⏰ Tomar</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            );
+          })
+        )}
+
+        {/* Botões de Ação */}
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={styles.emergencyButton}
-            onPress={() => navigation.navigate('Ajuda')}
+            onPress={ligarEmergencia}
           >
-            <Text style={styles.emergencyText}>🚨 Emergência</Text>
+            <Text style={styles.emergencyText}>🚨 Ligar Emergência (192)</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.helpButton}
-            onPress={() => navigation.navigate('Ajuda')}
+            onPress={() => navigation.navigate('Perfil')}
           >
-            <Text style={styles.helpText}>❓ Preciso de Ajuda</Text>
+            <Text style={styles.helpText}>👤 Ver Meu Perfil</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -97,6 +284,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
   header: {
     backgroundColor: '#2196F3',
@@ -172,6 +369,25 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 15,
   },
+  emptyContainer: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyIcon: {
+    fontSize: 60,
+    marginBottom: 15,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginBottom: 5,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+  },
   medicamentoCard: {
     backgroundColor: '#fff',
     padding: 15,
@@ -189,6 +405,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 2.22,
   },
+  medicamentoTomado: {
+    opacity: 0.6,
+  },
   medicamentoInfo: {
     flex: 1,
   },
@@ -197,6 +416,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 5,
+  },
+  medicamentoNomeTomado: {
+    textDecorationLine: 'line-through',
   },
   medicamentoHorario: {
     fontSize: 14,

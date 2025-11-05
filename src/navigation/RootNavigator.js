@@ -173,6 +173,7 @@ const RootNavigator = () => {
           // Interface simplificada para idosos
           <>
             <Stack.Screen name="CuidadoHome" component={CuidadoHomeScreen} />
+            <Stack.Screen name="Perfil" component={PerfilScreen} />
             <Stack.Screen name="Ajuda" component={AjudaScreen} />
           </>
         )}

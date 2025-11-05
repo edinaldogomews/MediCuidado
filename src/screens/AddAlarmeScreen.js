@@ -135,10 +135,25 @@ const AddAlarmeScreen = ({ navigation }) => {
     }
 
     try {
+      // Converte objeto de dias para array
+      const diasMap = {
+        'segunda': 'Seg',
+        'terca': 'Ter',
+        'quarta': 'Qua',
+        'quinta': 'Qui',
+        'sexta': 'Sex',
+        'sabado': 'Sáb',
+        'domingo': 'Dom'
+      };
+
+      const diasArray = Object.keys(formData.dias)
+        .filter(dia => formData.dias[dia])
+        .map(dia => diasMap[dia]);
+
       const novoAlarme = {
         medicamento_id: formData.medicamentoId,
         horario: formData.horario,
-        dias_semana: formData.dias,
+        dias_semana: diasArray, // Agora é array: ["Seg", "Ter", ...]
         ativo: 1,
         observacoes: ''
       };

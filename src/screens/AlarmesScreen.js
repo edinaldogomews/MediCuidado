@@ -55,23 +55,29 @@ const AlarmesScreen = ({ navigation }) => {
 
       // Formata os alarmes para exibição
       const alarmesFormatados = alarmesData.map(alarme => {
-        // Converte dias_semana para array de strings
-        const diasAtivos = [];
-        const diasMap = {
-          segunda: 'Seg',
-          terca: 'Ter',
-          quarta: 'Qua',
-          quinta: 'Qui',
-          sexta: 'Sex',
-          sabado: 'Sáb',
-          domingo: 'Dom'
-        };
+        // dias_semana já vem como array do DatabaseService: ["Seg", "Ter", ...]
+        let diasAtivos = [];
 
-        Object.keys(alarme.dias_semana).forEach(dia => {
-          if (alarme.dias_semana[dia]) {
-            diasAtivos.push(diasMap[dia]);
-          }
-        });
+        if (Array.isArray(alarme.dias_semana)) {
+          // Já é array, usa direto
+          diasAtivos = alarme.dias_semana;
+        } else if (typeof alarme.dias_semana === 'object' && alarme.dias_semana !== null) {
+          // Formato antigo (objeto), converte para array
+          const diasMap = {
+            segunda: 'Seg',
+            terca: 'Ter',
+            quarta: 'Qua',
+            quinta: 'Qui',
+            sexta: 'Sex',
+            sabado: 'Sáb',
+            domingo: 'Dom'
+          };
+
+          diasAtivos = Object.keys(alarme.dias_semana)
+            .filter(dia => alarme.dias_semana[dia])
+            .map(dia => diasMap[dia])
+            .filter(dia => dia !== undefined);
+        }
 
         return {
           id: alarme.id,

@@ -90,23 +90,50 @@ const EditAlarmeScreen = ({ navigation, route }) => {
       if (alarme) {
         console.log('🔍 medicamento_id do alarme:', alarme.medicamento_id, 'tipo:', typeof alarme.medicamento_id);
 
+        // Converte array de dias para objeto
+        const diasMap = {
+          'Seg': 'segunda',
+          'Ter': 'terca',
+          'Qua': 'quarta',
+          'Qui': 'quinta',
+          'Sex': 'sexta',
+          'Sáb': 'sabado',
+          'Dom': 'domingo'
+        };
+
+        let diasObj = {
+          segunda: false,
+          terca: false,
+          quarta: false,
+          quinta: false,
+          sexta: false,
+          sabado: false,
+          domingo: false,
+        };
+
+        // Se dias_semana é array, converte para objeto
+        if (Array.isArray(alarme.dias_semana)) {
+          alarme.dias_semana.forEach(dia => {
+            const diaKey = diasMap[dia];
+            if (diaKey) {
+              diasObj[diaKey] = true;
+            }
+          });
+        } else if (typeof alarme.dias_semana === 'object' && alarme.dias_semana !== null) {
+          // Se já é objeto, usa direto
+          diasObj = alarme.dias_semana;
+        }
+
         setFormData({
           medicamentoId: alarme.medicamento_id || '',
           horario: alarme.horario || '',
-          dias: alarme.dias_semana || {
-            segunda: false,
-            terca: false,
-            quarta: false,
-            quinta: false,
-            sexta: false,
-            sabado: false,
-            domingo: false,
-          },
+          dias: diasObj,
         });
 
         console.log('✅ FormData setado:', {
           medicamentoId: alarme.medicamento_id,
-          horario: alarme.horario
+          horario: alarme.horario,
+          dias: diasObj
         });
       } else {
         Alert.alert('Erro', 'Alarme não encontrado');
@@ -189,10 +216,25 @@ const EditAlarmeScreen = ({ navigation, route }) => {
     }
 
     try {
+      // Converte objeto de dias para array
+      const diasMap = {
+        'segunda': 'Seg',
+        'terca': 'Ter',
+        'quarta': 'Qua',
+        'quinta': 'Qui',
+        'sexta': 'Sex',
+        'sabado': 'Sáb',
+        'domingo': 'Dom'
+      };
+
+      const diasArray = Object.keys(formData.dias)
+        .filter(dia => formData.dias[dia])
+        .map(dia => diasMap[dia]);
+
       const alarmeAtualizado = {
         medicamento_id: formData.medicamentoId,
         horario: formData.horario,
-        dias_semana: formData.dias,
+        dias_semana: diasArray, // Agora é array: ["Seg", "Ter", ...]
         observacoes: ''
       };
 

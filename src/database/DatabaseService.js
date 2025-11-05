@@ -38,6 +38,9 @@ class DatabaseService {
         // Insere dados iniciais se necessário
         await this.insertInitialData();
 
+        // Migra dados antigos de alarmes (objeto → array)
+        await this.migrarDiasSemanAlarmes();
+
         this.isInitialized = true;
         console.log('✅ Banco de dados inicializado com sucesso!');
       } catch (error) {
@@ -229,6 +232,64 @@ class DatabaseService {
     } catch (error) {
       console.error('❌ Erro ao inserir dados iniciais:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Migra dados antigos de alarmes (objeto → array)
+   */
+  async migrarDiasSemanAlarmes() {
+    try {
+      // Busca todos os alarmes
+      const alarmes = await this.db.getAllAsync('SELECT id, dias_semana FROM alarmes');
+
+      let migrados = 0;
+
+      for (const alarme of alarmes) {
+        try {
+          let diasSemana = alarme.dias_semana;
+
+          // Se é string, faz parse
+          if (typeof diasSemana === 'string') {
+            diasSemana = JSON.parse(diasSemana);
+          }
+
+          // Se é objeto (formato antigo), converte para array
+          if (typeof diasSemana === 'object' && !Array.isArray(diasSemana) && diasSemana !== null) {
+            const diasMap = {
+              'segunda': 'Seg',
+              'terca': 'Ter',
+              'quarta': 'Qua',
+              'quinta': 'Qui',
+              'sexta': 'Sex',
+              'sabado': 'Sáb',
+              'domingo': 'Dom'
+            };
+
+            const diasArray = Object.keys(diasSemana)
+              .filter(dia => diasSemana[dia] === true)
+              .map(dia => diasMap[dia])
+              .filter(dia => dia !== undefined);
+
+            // Atualiza no banco
+            await this.db.runAsync(
+              'UPDATE alarmes SET dias_semana = ? WHERE id = ?',
+              [JSON.stringify(diasArray), alarme.id]
+            );
+
+            migrados++;
+          }
+        } catch (parseError) {
+          console.warn(`⚠️ Erro ao migrar alarme ${alarme.id}:`, parseError);
+        }
+      }
+
+      if (migrados > 0) {
+        console.log(`✅ Migrados ${migrados} alarmes de objeto para array`);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao migrar dias_semana:', error);
+      // Não lança erro para não impedir a inicialização
     }
   }
 
@@ -480,6 +541,49 @@ class DatabaseService {
 
   // ========== ALARMES ==========
 
+  // Função auxiliar para fazer parse seguro de dias_semana
+  _parseDiasSemana(diasSemana) {
+    try {
+      let parsed = diasSemana;
+
+      // Se é string, faz parse
+      if (typeof diasSemana === 'string') {
+        parsed = JSON.parse(diasSemana);
+      }
+
+      // Se já é array, retorna direto
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+
+      // Se é objeto (formato antigo), converte para array
+      if (typeof parsed === 'object' && parsed !== null) {
+        const diasMap = {
+          'segunda': 'Seg',
+          'terca': 'Ter',
+          'quarta': 'Qua',
+          'quinta': 'Qui',
+          'sexta': 'Sex',
+          'sabado': 'Sáb',
+          'domingo': 'Dom'
+        };
+
+        const diasArray = Object.keys(parsed)
+          .filter(dia => parsed[dia] === true)
+          .map(dia => diasMap[dia])
+          .filter(dia => dia !== undefined);
+
+        return diasArray;
+      }
+
+      return [];
+    } catch (error) {
+      console.error('Erro ao fazer parse de dias_semana:', error);
+      console.log('Valor problemático:', diasSemana);
+      return [];
+    }
+  }
+
   async getAllAlarmes() {
     await this.init();
     const alarmes = await this.db.getAllAsync(`
@@ -489,10 +593,10 @@ class DatabaseService {
       ORDER BY a.horario
     `);
 
-    // Parse dias_semana JSON
+    // Parse dias_semana JSON com tratamento de erro
     return alarmes.map(alarme => ({
       ...alarme,
-      dias_semana: JSON.parse(alarme.dias_semana)
+      dias_semana: this._parseDiasSemana(alarme.dias_semana)
     }));
   }
 
@@ -508,7 +612,7 @@ class DatabaseService {
 
     return alarmes.map(alarme => ({
       ...alarme,
-      dias_semana: JSON.parse(alarme.dias_semana)
+      dias_semana: this._parseDiasSemana(alarme.dias_semana)
     }));
   }
 
@@ -522,7 +626,7 @@ class DatabaseService {
 
     return alarmes.map(alarme => ({
       ...alarme,
-      dias_semana: JSON.parse(alarme.dias_semana)
+      dias_semana: this._parseDiasSemana(alarme.dias_semana)
     }));
   }
 
@@ -536,7 +640,7 @@ class DatabaseService {
     `, [id]);
 
     if (alarme) {
-      alarme.dias_semana = JSON.parse(alarme.dias_semana);
+      alarme.dias_semana = this._parseDiasSemana(alarme.dias_semana);
     }
     return alarme;
   }
