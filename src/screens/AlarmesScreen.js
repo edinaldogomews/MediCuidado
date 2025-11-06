@@ -26,8 +26,8 @@ const AlarmesScreen = ({ navigation }) => {
     }
     const state = typeof navigation.getState === 'function' ? navigation.getState() : undefined;
     const routeNames = state && Array.isArray(state.routeNames) ? state.routeNames : [];
-    
-    // If we're in AlarmesTab, go back to Main (which contains the tab navigator)
+
+    // Se estamos na aba Alarmes, volta para Main (que contém o navegador de abas)
     if (routeNames.includes('Main')) {
       navigation.navigate('Main');
       return;
@@ -47,7 +47,7 @@ const AlarmesScreen = ({ navigation }) => {
   const [filtroStatus, setFiltroStatus] = useState('Todos'); // Todos, Ativos, Inativos, Tomados
   const [alarmesTomados, setAlarmesTomados] = useState([]); // Lista de IDs de alarmes marcados como tomados hoje
 
-  // Load alarms from database
+  // Carregar alarmes do banco de dados
   const carregarAlarmes = async () => {
     setIsLoading(true);
     try {
@@ -110,7 +110,7 @@ const AlarmesScreen = ({ navigation }) => {
     carregarAlarmes();
   }, []);
 
-  // Reload alarms when screen comes into focus
+  // Recarregar alarmes quando a tela ganhar foco
   useFocusEffect(
     React.useCallback(() => {
       carregarAlarmes();

@@ -1,17 +1,49 @@
 // 🗄️ BANCO DE DADOS SQLite - DatabaseService.js
-// Serviço de banco de dados usando Expo SQLite
+// ============================================
+// DESCRIÇÃO: Serviço principal de banco de dados usando Expo SQLite
+// RESPONSABILIDADES:
+//   - Gerenciar conexão com banco SQLite
+//   - Criar e manter estrutura de tabelas
+//   - Fornecer métodos CRUD para todas as entidades
+//   - Garantir integridade dos dados
+//   - Migrar dados antigos quando necessário
+//
+// TABELAS:
+//   - medicamentos: Cadastro de medicamentos
+//   - estoque: Controle de quantidade e validade
+//   - movimentacoes: Histórico de entradas/saídas
+//   - alertas: Notificações do sistema
+//   - alarmes: Lembretes de horários
+//
+// PADRÃO: Singleton (uma única instância compartilhada)
+// ============================================
 
 import * as SQLite from 'expo-sqlite';
 
 class DatabaseService {
   constructor() {
-    this.db = null;
-    this.isInitialized = false;
-    this.initPromise = null;
+    this.db = null;                    // Instância do banco de dados
+    this.isInitialized = false;        // Flag de inicialização
+    this.initPromise = null;           // Promise de inicialização (evita múltiplas inicializações)
   }
+
+  // ============================================
+  // INICIALIZAÇÃO DO BANCO
+  // ============================================
 
   /**
    * Inicializa o banco de dados e cria as tabelas
+   *
+   * IMPORTANTE: Usa padrão Singleton para evitar múltiplas inicializações
+   * - Se já inicializado: retorna imediatamente
+   * - Se inicializando: aguarda a promise existente
+   * - Se não inicializado: cria nova promise de inicialização
+   *
+   * FLUXO:
+   * 1. Abre/cria banco 'medicuidado.db'
+   * 2. Cria estrutura de tabelas
+   * 3. Insere dados iniciais (se banco vazio)
+   * 4. Migra dados antigos (se necessário)
    */
   async init() {
     // Se já está inicializado, retorna
@@ -56,7 +88,10 @@ class DatabaseService {
   }
 
   /**
-   * Garante que o banco está inicializado
+   * Garante que o banco está inicializado antes de executar operações
+   *
+   * USO: Chamar antes de qualquer operação de banco
+   * LANÇA ERRO: Se não conseguir inicializar
    */
   async ensureInitialized() {
     if (!this.db || !this.isInitialized) {

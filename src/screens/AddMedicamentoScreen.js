@@ -48,7 +48,7 @@ const AddMedicamentoScreen = ({ navigation }) => {
     horarios: [],
   });
 
-  // Novo estado para intervalo de horas
+  // Estado para intervalo de horas
   const [intervaloHoras, setIntervaloHoras] = useState(''); // 4, 6, 8, 12, 24
 
   const updateField = (field, value) => {
