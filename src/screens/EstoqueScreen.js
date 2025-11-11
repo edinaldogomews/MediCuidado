@@ -512,39 +512,87 @@ const EstoqueScreen = ({ navigation }) => {
       >
         <View style={styles.modalContainer}>
           <View style={[styles.modalContent, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
-            <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#333' }]}>Adicionar Entrada</Text>
+            <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#333' }]}>📦 Adicionar Entrada de Estoque</Text>
 
-            <Text style={[styles.label, { color: isDark ? '#bbb' : '#333' }]}>Selecione o medicamento:</Text>
-            <View style={styles.medicamentoList}>
+            {/* Medicamento Selecionado */}
+            {selectedMedicamento && (
+              <View style={[styles.selectedMedicamentoBox, { backgroundColor: isDark ? '#2a2a2a' : '#e3f2fd' }]}>
+                <Text style={[styles.selectedMedicamentoLabel, { color: isDark ? '#aaa' : '#666' }]}>
+                  Medicamento selecionado:
+                </Text>
+                <Text style={[styles.selectedMedicamentoText, { color: isDark ? '#fff' : '#1976d2' }]}>
+                  {selectedMedicamento.medicamento}
+                </Text>
+                <Text style={[styles.selectedMedicamentoSubtext, { color: isDark ? '#888' : '#666' }]}>
+                  Estoque atual: {selectedMedicamento.quantidade} unidades
+                </Text>
+              </View>
+            )}
+
+            <Text style={[styles.label, { color: isDark ? '#bbb' : '#333', marginTop: 15 }]}>
+              Selecione o medicamento:
+            </Text>
+            <ScrollView style={styles.medicamentoList}>
               {estoque.map(item => (
                 <TouchableOpacity
                   key={item.id}
                   style={[
                     styles.medicamentoOption,
                     selectedMedicamento?.id === item.id && styles.medicamentoOptionSelected,
-                    { backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5' }
+                    {
+                      backgroundColor: selectedMedicamento?.id === item.id
+                        ? (isDark ? '#1976d2' : '#2196F3')
+                        : (isDark ? '#2a2a2a' : '#f5f5f5'),
+                      borderColor: selectedMedicamento?.id === item.id ? '#1976d2' : 'transparent',
+                      borderWidth: 2,
+                    }
                   ]}
                   onPress={() => setSelectedMedicamento(item)}
                 >
-                  <Text style={[styles.medicamentoOptionText, { color: isDark ? '#fff' : '#333' }]}>
+                  <Text style={[
+                    styles.medicamentoOptionText,
+                    { color: selectedMedicamento?.id === item.id ? '#fff' : (isDark ? '#fff' : '#333') }
+                  ]}>
                     {item.medicamento}
                   </Text>
-                  <Text style={[styles.medicamentoOptionSubtext, { color: isDark ? '#aaa' : '#666' }]}>
-                    Atual: {item.quantidade} un.
+                  <Text style={[
+                    styles.medicamentoOptionSubtext,
+                    { color: selectedMedicamento?.id === item.id ? '#e3f2fd' : (isDark ? '#aaa' : '#666') }
+                  ]}>
+                    Estoque atual: {item.quantidade} un.
                   </Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
 
-            <Text style={[styles.label, { color: isDark ? '#bbb' : '#333' }]}>Quantidade a adicionar:</Text>
+            <Text style={[styles.label, { color: isDark ? '#bbb' : '#333', marginTop: 15 }]}>
+              Quantidade a adicionar:
+            </Text>
             <TextInput
-              style={[styles.input, { color: isDark ? '#fff' : '#333', borderColor: isDark ? '#444' : '#ddd' }]}
-              placeholder="Digite a quantidade"
+              style={[
+                styles.input,
+                {
+                  color: isDark ? '#fff' : '#333',
+                  borderColor: isDark ? '#444' : '#ddd',
+                  backgroundColor: isDark ? '#2a2a2a' : '#fff',
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                }
+              ]}
+              placeholder="Ex: 30"
               placeholderTextColor={isDark ? '#666' : '#999'}
               keyboardType="numeric"
               value={quantidadeEntrada}
               onChangeText={setQuantidadeEntrada}
             />
+
+            {selectedMedicamento && quantidadeEntrada && !isNaN(quantidadeEntrada) && (
+              <View style={[styles.previewBox, { backgroundColor: isDark ? '#1e3a1e' : '#e8f5e9' }]}>
+                <Text style={[styles.previewText, { color: isDark ? '#81c784' : '#2e7d32' }]}>
+                  ✅ Novo estoque: {selectedMedicamento.quantidade + parseInt(quantidadeEntrada)} unidades
+                </Text>
+              </View>
+            )}
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -555,13 +603,14 @@ const EstoqueScreen = ({ navigation }) => {
                   setQuantidadeEntrada('');
                 }}
               >
-                <Text style={styles.buttonText}>Cancelar</Text>
+                <Text style={styles.buttonText}>❌ Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.confirmButton]}
                 onPress={handleAdicionarEntrada}
+                disabled={!selectedMedicamento || !quantidadeEntrada}
               >
-                <Text style={styles.buttonText}>Confirmar</Text>
+                <Text style={styles.buttonText}>✅ Confirmar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -577,9 +626,26 @@ const EstoqueScreen = ({ navigation }) => {
       >
         <View style={styles.modalContainer}>
           <View style={[styles.modalContent, { backgroundColor: isDark ? '#1e1e1e' : '#fff' }]}>
-            <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#333' }]}>Registrar Saída</Text>
+            <Text style={[styles.modalTitle, { color: isDark ? '#fff' : '#333' }]}>📤 Registrar Saída de Estoque</Text>
 
-            <Text style={[styles.label, { color: isDark ? '#bbb' : '#333' }]}>Selecione o medicamento:</Text>
+            {/* Medicamento Selecionado */}
+            {selectedMedicamento && (
+              <View style={[styles.selectedMedicamentoBox, { backgroundColor: isDark ? '#2a2a2a' : '#fff3e0' }]}>
+                <Text style={[styles.selectedMedicamentoLabel, { color: isDark ? '#aaa' : '#666' }]}>
+                  Medicamento selecionado:
+                </Text>
+                <Text style={[styles.selectedMedicamentoText, { color: isDark ? '#fff' : '#f57c00' }]}>
+                  {selectedMedicamento.medicamento}
+                </Text>
+                <Text style={[styles.selectedMedicamentoSubtext, { color: isDark ? '#888' : '#666' }]}>
+                  Disponível: {selectedMedicamento.quantidade} unidades
+                </Text>
+              </View>
+            )}
+
+            <Text style={[styles.label, { color: isDark ? '#bbb' : '#333', marginTop: 15 }]}>
+              Selecione o medicamento:
+            </Text>
             <ScrollView style={styles.medicamentoList}>
               {estoque.map(item => (
                 <TouchableOpacity
@@ -587,34 +653,87 @@ const EstoqueScreen = ({ navigation }) => {
                   style={[
                     styles.medicamentoOption,
                     selectedMedicamento?.id === item.id && styles.medicamentoOptionSelected,
-                    { backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5' }
+                    {
+                      backgroundColor: selectedMedicamento?.id === item.id
+                        ? (isDark ? '#f57c00' : '#FF9800')
+                        : (isDark ? '#2a2a2a' : '#f5f5f5'),
+                      borderColor: selectedMedicamento?.id === item.id ? '#f57c00' : 'transparent',
+                      borderWidth: 2,
+                    }
                   ]}
                   onPress={() => setSelectedMedicamento(item)}
                 >
-                  <Text style={[styles.medicamentoOptionText, { color: isDark ? '#fff' : '#333' }]}>
+                  <Text style={[
+                    styles.medicamentoOptionText,
+                    { color: selectedMedicamento?.id === item.id ? '#fff' : (isDark ? '#fff' : '#333') }
+                  ]}>
                     {item.medicamento}
                   </Text>
-                  <Text style={[styles.medicamentoOptionSubtext, { color: isDark ? '#aaa' : '#666' }]}>
+                  <Text style={[
+                    styles.medicamentoOptionSubtext,
+                    { color: selectedMedicamento?.id === item.id ? '#fff3e0' : (isDark ? '#aaa' : '#666') }
+                  ]}>
                     Disponível: {item.quantidade} un.
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
-            <Text style={[styles.label, { color: isDark ? '#bbb' : '#333' }]}>Quantidade a remover:</Text>
+            <Text style={[styles.label, { color: isDark ? '#bbb' : '#333', marginTop: 15 }]}>
+              Quantidade a remover:
+            </Text>
             <TextInput
-              style={[styles.input, { color: isDark ? '#fff' : '#333', borderColor: isDark ? '#444' : '#ddd', backgroundColor: isDark ? '#2a2a2a' : '#fff' }]}
-              placeholder="Digite a quantidade"
+              style={[
+                styles.input,
+                {
+                  color: isDark ? '#fff' : '#333',
+                  borderColor: isDark ? '#444' : '#ddd',
+                  backgroundColor: isDark ? '#2a2a2a' : '#fff',
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                }
+              ]}
+              placeholder="Ex: 5"
               placeholderTextColor={isDark ? '#666' : '#999'}
               keyboardType="numeric"
               value={quantidadeSaida}
               onChangeText={setQuantidadeSaida}
             />
 
-            <Text style={[styles.label, { color: isDark ? '#bbb' : '#333' }]}>Motivo (opcional):</Text>
+            {selectedMedicamento && quantidadeSaida && !isNaN(quantidadeSaida) && (
+              <View style={[
+                styles.previewBox,
+                {
+                  backgroundColor: parseInt(quantidadeSaida) > selectedMedicamento.quantidade
+                    ? (isDark ? '#3a1e1e' : '#ffebee')
+                    : (isDark ? '#3a2e1e' : '#fff3e0')
+                }
+              ]}>
+                {parseInt(quantidadeSaida) > selectedMedicamento.quantidade ? (
+                  <Text style={[styles.previewText, { color: isDark ? '#ef5350' : '#c62828' }]}>
+                    ⚠️ Quantidade insuficiente! Disponível: {selectedMedicamento.quantidade}
+                  </Text>
+                ) : (
+                  <Text style={[styles.previewText, { color: isDark ? '#ffb74d' : '#f57c00' }]}>
+                    ✅ Novo estoque: {selectedMedicamento.quantidade - parseInt(quantidadeSaida)} unidades
+                  </Text>
+                )}
+              </View>
+            )}
+
+            <Text style={[styles.label, { color: isDark ? '#bbb' : '#333', marginTop: 10 }]}>
+              Motivo (opcional):
+            </Text>
             <TextInput
-              style={[styles.input, { color: isDark ? '#fff' : '#333', borderColor: isDark ? '#444' : '#ddd', backgroundColor: isDark ? '#2a2a2a' : '#fff' }]}
-              placeholder="Ex: Consumo, Descarte, etc."
+              style={[
+                styles.input,
+                {
+                  color: isDark ? '#fff' : '#333',
+                  borderColor: isDark ? '#444' : '#ddd',
+                  backgroundColor: isDark ? '#2a2a2a' : '#fff'
+                }
+              ]}
+              placeholder="Ex: Consumo, Descarte, Vencido..."
               placeholderTextColor={isDark ? '#666' : '#999'}
               value={motivoSaida}
               onChangeText={setMotivoSaida}
@@ -630,13 +749,14 @@ const EstoqueScreen = ({ navigation }) => {
                   setMotivoSaida('');
                 }}
               >
-                <Text style={styles.buttonText}>Cancelar</Text>
+                <Text style={styles.buttonText}>❌ Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.button, styles.confirmButton]}
                 onPress={handleAdicionarSaida}
+                disabled={!selectedMedicamento || !quantidadeSaida}
               >
-                <Text style={styles.buttonText}>Confirmar</Text>
+                <Text style={styles.buttonText}>✅ Confirmar</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -951,6 +1071,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  selectedMedicamentoBox: {
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 15,
+    borderWidth: 2,
+    borderColor: '#2196F3',
+  },
+  selectedMedicamentoLabel: {
+    fontSize: 12,
+    marginBottom: 5,
+  },
+  selectedMedicamentoText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  selectedMedicamentoSubtext: {
+    fontSize: 14,
+  },
+  previewBox: {
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  previewText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });
 
