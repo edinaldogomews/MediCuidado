@@ -46,6 +46,7 @@ const AddMedicamentoScreen = ({ navigation }) => {
     quantidade: '', // Quantidade atual
     estoqueMinimo: '10', // Valor padrão
     horarios: [],
+    observacoes: '', // Campo de observações
   });
 
   // Estado para intervalo de horas
@@ -109,12 +110,12 @@ const AddMedicamentoScreen = ({ navigation }) => {
       console.log('💊 Salvando medicamento:', formData);
 
       const medicamentoId = await databaseService.addMedicamento({
-        nome: formData.nome.trim(),
-        descricao: formData.observacoes.trim() || '',
-        dosagem: formData.dosagem.trim(),
+        nome: (formData.nome || '').trim(),
+        descricao: (formData.observacoes || '').trim(),
+        dosagem: (formData.dosagem || '').trim(),
         fabricante: '',
         preco: 0,
-        categoria: formData.tipo.trim() || 'Medicamento',
+        categoria: (formData.tipo || '').trim() || 'Medicamento',
       });
 
       console.log('✅ Medicamento salvo com ID:', medicamentoId);
@@ -139,7 +140,7 @@ const AddMedicamentoScreen = ({ navigation }) => {
       console.log('✅ Estoque adicionado');
 
       // 3. Adiciona os alarmes/horários se informados
-      const horariosValidos = formData.horarios.filter(h => h.trim() !== '');
+      const horariosValidos = (formData.horarios || []).filter(h => h && h.trim() !== '');
       if (horariosValidos.length > 0) {
         for (const horario of horariosValidos) {
           const alarmeData = {
@@ -155,7 +156,7 @@ const AddMedicamentoScreen = ({ navigation }) => {
               domingo: true
             },
             ativo: 1,
-            observacoes: formData.observacoes.trim() || '',
+            observacoes: (formData.observacoes || '').trim(),
           };
 
           console.log('📝 Adicionando alarme:', alarmeData);
@@ -288,6 +289,19 @@ const AddMedicamentoScreen = ({ navigation }) => {
             <Text style={[styles.helpText, { color: isDark ? '#888' : '#999' }]}>
               💡 Você receberá um alerta quando o estoque atingir este valor
             </Text>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: isDark ? '#bbb' : '#555' }]}>Observações (opcional)</Text>
+            <TextInput
+              style={[styles.input, styles.textArea, { backgroundColor: isDark ? '#2a2a2a' : '#fff', color: isDark ? '#ddd' : '#000', borderColor: isDark ? '#444' : '#ddd' }]}
+              placeholder="Ex: Tomar em jejum, evitar laticínios..."
+              placeholderTextColor={isDark ? '#888' : undefined}
+              value={formData.observacoes}
+              onChangeText={(value) => updateField('observacoes', value)}
+              multiline
+              numberOfLines={3}
+            />
           </View>
         </View>
 
@@ -434,6 +448,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
     backgroundColor: '#fff',
   },
   horarioRow: {
