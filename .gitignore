@@ -41,5 +41,5 @@ yarn-error.*
 /android
 
 # Ignorar arquivos markdown exceto README
-*.md
-!README.md
+#*.md
+#!README.md
