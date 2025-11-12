@@ -104,71 +104,121 @@ class DatabaseService {
 
   /**
    * Cria as tabelas do banco de dados
+   *
+   * TABELAS CRIADAS:
+   *
+   * 1. MEDICAMENTOS:
+   *    - Armazena informações básicas dos medicamentos
+   *    - Campos: id, nome, descricao, dosagem, fabricante, preco, categoria, ativo
+   *
+   * 2. ESTOQUE:
+   *    - Controla quantidade e validade dos medicamentos
+   *    - Campos: id, medicamento_id, quantidade, minimo, maximo, vencimento, status, lote
+   *    - Relacionamento: medicamento_id → medicamentos(id) com CASCADE
+   *
+   * 3. MOVIMENTACOES:
+   *    - Registra histórico de entradas e saídas
+   *    - Campos: id, medicamento_id, tipo, quantidade, data, usuario, motivo
+   *    - Tipos: 'entrada' ou 'saida'
+   *
+   * 4. ALERTAS:
+   *    - Notificações do sistema (estoque baixo, vencimento, etc.)
+   *    - Campos: id, medicamento_id, tipo, mensagem, data, lido
+   *
+   * 5. ALARMES:
+   *    - Lembretes de horários para tomar medicamentos
+   *    - Campos: id, medicamento_id, horario, dias_semana, ativo, observacoes
+   *    - dias_semana: JSON array ["Seg", "Ter", "Qua", ...]
+   *
+   * IMPORTANTE:
+   * - Usa CREATE TABLE IF NOT EXISTS (não recria se já existe)
+   * - Foreign keys com ON DELETE CASCADE (deleta registros relacionados)
+   * - Timestamps automáticos (created_at, updated_at)
    */
   async createTables() {
     try {
-      // Cria todas as tabelas em um único execAsync
+      // Cria todas as tabelas em um único execAsync para melhor performance
       await this.db.execAsync(`
+        -- ========================================
+        -- TABELA: MEDICAMENTOS
+        -- Armazena informações básicas dos medicamentos
+        -- ========================================
         CREATE TABLE IF NOT EXISTS medicamentos (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          nome TEXT NOT NULL,
-          descricao TEXT,
-          dosagem TEXT NOT NULL,
-          fabricante TEXT,
-          preco REAL DEFAULT 0,
-          categoria TEXT,
-          ativo INTEGER DEFAULT 1,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          id INTEGER PRIMARY KEY AUTOINCREMENT,    -- ID único do medicamento
+          nome TEXT NOT NULL,                      -- Nome do medicamento (ex: "Losartana 50mg")
+          descricao TEXT,                          -- Descrição/indicação (ex: "Para pressão alta")
+          dosagem TEXT NOT NULL,                   -- Dosagem (ex: "50mg", "10ml")
+          fabricante TEXT,                         -- Nome do fabricante
+          preco REAL DEFAULT 0,                    -- Preço unitário
+          categoria TEXT,                          -- Categoria (ex: "Cardiovascular")
+          ativo INTEGER DEFAULT 1,                 -- 1 = ativo, 0 = inativo
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Data de criação
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP   -- Data de atualização
         );
 
+        -- ========================================
+        -- TABELA: ESTOQUE
+        -- Controla quantidade e validade dos medicamentos
+        -- ========================================
         CREATE TABLE IF NOT EXISTS estoque (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          medicamento_id INTEGER NOT NULL,
-          quantidade INTEGER NOT NULL DEFAULT 0,
-          minimo INTEGER DEFAULT 10,
-          maximo INTEGER DEFAULT 100,
-          vencimento DATE,
-          status TEXT DEFAULT 'normal',
-          lote TEXT,
-          data_entrada DATE,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          id INTEGER PRIMARY KEY AUTOINCREMENT,    -- ID único do registro de estoque
+          medicamento_id INTEGER NOT NULL,         -- ID do medicamento (FK)
+          quantidade INTEGER NOT NULL DEFAULT 0,   -- Quantidade atual em estoque
+          minimo INTEGER DEFAULT 10,               -- Quantidade mínima (alerta se abaixo)
+          maximo INTEGER DEFAULT 100,              -- Quantidade máxima recomendada
+          vencimento DATE,                         -- Data de vencimento
+          status TEXT DEFAULT 'normal',            -- Status: 'normal', 'baixo', 'vencendo', 'vencido'
+          lote TEXT,                               -- Número do lote
+          data_entrada DATE,                       -- Data de entrada no estoque
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Data de criação
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Data de atualização
           FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id) ON DELETE CASCADE
         );
 
+        -- ========================================
+        -- TABELA: MOVIMENTACOES
+        -- Registra histórico de entradas e saídas
+        -- ========================================
         CREATE TABLE IF NOT EXISTS movimentacoes (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          medicamento_id INTEGER NOT NULL,
-          tipo TEXT NOT NULL,
-          quantidade INTEGER NOT NULL,
-          data DATE NOT NULL,
-          usuario TEXT,
-          motivo TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          id INTEGER PRIMARY KEY AUTOINCREMENT,    -- ID único da movimentação
+          medicamento_id INTEGER NOT NULL,         -- ID do medicamento (FK)
+          tipo TEXT NOT NULL,                      -- Tipo: 'entrada' ou 'saida'
+          quantidade INTEGER NOT NULL,             -- Quantidade movimentada
+          data DATE NOT NULL,                      -- Data da movimentação
+          usuario TEXT,                            -- Usuário que fez a movimentação
+          motivo TEXT,                             -- Motivo da movimentação
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Data de criação
           FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id) ON DELETE CASCADE
         );
 
+        -- ========================================
+        -- TABELA: ALERTAS
+        -- Notificações do sistema
+        -- ========================================
         CREATE TABLE IF NOT EXISTS alertas (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          medicamento_id INTEGER,
-          tipo TEXT NOT NULL,
-          mensagem TEXT NOT NULL,
-          data DATE NOT NULL,
-          lido INTEGER DEFAULT 0,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          id INTEGER PRIMARY KEY AUTOINCREMENT,    -- ID único do alerta
+          medicamento_id INTEGER,                  -- ID do medicamento (FK, pode ser NULL)
+          tipo TEXT NOT NULL,                      -- Tipo: 'estoque_baixo', 'vencimento_proximo', etc.
+          mensagem TEXT NOT NULL,                  -- Mensagem do alerta
+          data DATE NOT NULL,                      -- Data do alerta
+          lido INTEGER DEFAULT 0,                  -- 0 = não lido, 1 = lido
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Data de criação
           FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id) ON DELETE CASCADE
         );
 
+        -- ========================================
+        -- TABELA: ALARMES
+        -- Lembretes de horários para tomar medicamentos
+        -- ========================================
         CREATE TABLE IF NOT EXISTS alarmes (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          medicamento_id INTEGER NOT NULL,
-          horario TEXT NOT NULL,
-          dias_semana TEXT NOT NULL,
-          ativo INTEGER DEFAULT 1,
-          observacoes TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          id INTEGER PRIMARY KEY AUTOINCREMENT,    -- ID único do alarme
+          medicamento_id INTEGER NOT NULL,         -- ID do medicamento (FK)
+          horario TEXT NOT NULL,                   -- Horário do alarme (ex: "08:00")
+          dias_semana TEXT NOT NULL,               -- Dias da semana (JSON array: ["Seg", "Ter", ...])
+          ativo INTEGER DEFAULT 1,                 -- 1 = ativo, 0 = inativo
+          observacoes TEXT,                        -- Observações (ex: "Tomar em jejum")
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Data de criação
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,  -- Data de atualização
           FOREIGN KEY (medicamento_id) REFERENCES medicamentos(id) ON DELETE CASCADE
         );
       `);
@@ -182,10 +232,22 @@ class DatabaseService {
 
   /**
    * Insere dados iniciais no banco de dados
+   *
+   * DADOS INSERIDOS:
+   * - 5 medicamentos de exemplo
+   * - Estoque inicial para cada medicamento
+   * - Algumas movimentações de exemplo
+   * - Alertas de teste
+   * - Alarmes de exemplo
+   *
+   * IMPORTANTE:
+   * - Só insere se o banco estiver vazio (count = 0)
+   * - Útil para demonstração e testes
+   * - Em produção, pode ser removido ou adaptado
    */
   async insertInitialData() {
     try {
-      // Verifica se já existem medicamentos
+      // Verifica se já existem medicamentos no banco
       const result = await this.db.getFirstAsync('SELECT COUNT(*) as count FROM medicamentos');
 
       if (result && result.count > 0) {
@@ -272,25 +334,44 @@ class DatabaseService {
 
   /**
    * Migra dados antigos de alarmes (objeto → array)
+   *
+   * PROBLEMA:
+   * - Versões antigas salvavam dias_semana como objeto:
+   *   {segunda: true, terca: false, ...}
+   *
+   * - Versão atual usa array:
+   *   ["Seg", "Ter", "Qua"]
+   *
+   * SOLUÇÃO:
+   * - Busca todos os alarmes
+   * - Verifica se dias_semana é objeto (formato antigo)
+   * - Converte para array (formato novo)
+   * - Atualiza no banco
+   *
+   * EXEMPLO DE CONVERSÃO:
+   * {segunda: true, terca: true, quarta: false}
+   * → ["Seg", "Ter"]
    */
   async migrarDiasSemanAlarmes() {
     try {
-      // Busca todos os alarmes
+      // Busca todos os alarmes do banco
       const alarmes = await this.db.getAllAsync('SELECT id, dias_semana FROM alarmes');
 
-      let migrados = 0;
+      let migrados = 0; // Contador de alarmes migrados
 
+      // Processa cada alarme
       for (const alarme of alarmes) {
         try {
           let diasSemana = alarme.dias_semana;
 
-          // Se é string, faz parse
+          // Se é string JSON, faz parse para objeto/array
           if (typeof diasSemana === 'string') {
             diasSemana = JSON.parse(diasSemana);
           }
 
-          // Se é objeto (formato antigo), converte para array
+          // Verifica se é objeto (formato antigo) e não é array
           if (typeof diasSemana === 'object' && !Array.isArray(diasSemana) && diasSemana !== null) {
+            // Mapeamento de nomes de dias (português completo → abreviado)
             const diasMap = {
               'segunda': 'Seg',
               'terca': 'Ter',
@@ -301,40 +382,72 @@ class DatabaseService {
               'domingo': 'Dom'
             };
 
+            // Converte objeto para array
+            // Exemplo: {segunda: true, terca: true, quarta: false}
+            // 1. Object.keys() → ['segunda', 'terca', 'quarta']
+            // 2. filter(true) → ['segunda', 'terca']
+            // 3. map(diasMap) → ['Seg', 'Ter']
             const diasArray = Object.keys(diasSemana)
-              .filter(dia => diasSemana[dia] === true)
-              .map(dia => diasMap[dia])
-              .filter(dia => dia !== undefined);
+              .filter(dia => diasSemana[dia] === true)  // Pega apenas dias marcados como true
+              .map(dia => diasMap[dia])                 // Converte para abreviação
+              .filter(dia => dia !== undefined);        // Remove valores inválidos
 
-            // Atualiza no banco
+            // Atualiza o alarme no banco com o novo formato
             await this.db.runAsync(
               'UPDATE alarmes SET dias_semana = ? WHERE id = ?',
               [JSON.stringify(diasArray), alarme.id]
             );
 
-            migrados++;
+            migrados++; // Incrementa contador
           }
         } catch (parseError) {
+          // Se der erro em um alarme específico, continua com os outros
           console.warn(`⚠️ Erro ao migrar alarme ${alarme.id}:`, parseError);
         }
       }
 
+      // Exibe mensagem de sucesso se migrou algum alarme
       if (migrados > 0) {
         console.log(`✅ Migrados ${migrados} alarmes de objeto para array`);
       }
     } catch (error) {
       console.error('❌ Erro ao migrar dias_semana:', error);
-      // Não lança erro para não impedir a inicialização
+      // Não lança erro para não impedir a inicialização do app
     }
   }
 
-  // ========== MEDICAMENTOS ==========
+  // ========================================
+  // OPERAÇÕES COM MEDICAMENTOS
+  // ========================================
 
+  /**
+   * Busca todos os medicamentos ativos
+   *
+   * @returns {Promise<Array>} Array com todos os medicamentos ativos
+   *
+   * EXEMPLO DE RETORNO:
+   * [
+   *   { id: 1, nome: 'Losartana 50mg', dosagem: '50mg', ... },
+   *   { id: 2, nome: 'Metformina 850mg', dosagem: '850mg', ... }
+   * ]
+   */
   async getAllMedicamentos() {
     await this.init();
     return await this.db.getAllAsync('SELECT * FROM medicamentos WHERE ativo = 1 ORDER BY nome');
   }
 
+  /**
+   * Verifica se um medicamento já existe no banco
+   *
+   * @param {string} nome - Nome do medicamento
+   * @param {string} dosagem - Dosagem do medicamento
+   * @returns {Promise<boolean>} true se existe, false se não existe
+   *
+   * IMPORTANTE:
+   * - Comparação case-insensitive (LOWER)
+   * - Verifica apenas medicamentos ativos
+   * - Usado para evitar duplicatas
+   */
   async medicamentoExiste(nome, dosagem) {
     await this.ensureInitialized();
     const result = await this.db.getFirstAsync(
@@ -344,26 +457,57 @@ class DatabaseService {
     return result !== null;
   }
 
+  /**
+   * Busca um medicamento específico por ID
+   *
+   * @param {number} id - ID do medicamento
+   * @returns {Promise<Object|null>} Objeto do medicamento ou null se não encontrado
+   */
   async getMedicamentoById(id) {
     await this.init();
     return await this.db.getFirstAsync('SELECT * FROM medicamentos WHERE id = ?', [id]);
   }
 
+  /**
+   * Adiciona um novo medicamento ao banco
+   *
+   * @param {Object} medicamento - Dados do medicamento
+   * @param {string} medicamento.nome - Nome do medicamento (obrigatório)
+   * @param {string} medicamento.dosagem - Dosagem (obrigatório)
+   * @param {string} medicamento.descricao - Descrição (opcional)
+   * @param {string} medicamento.fabricante - Fabricante (opcional)
+   * @param {number} medicamento.preco - Preço (opcional, padrão: 0)
+   * @param {string} medicamento.categoria - Categoria (opcional, padrão: 'Medicamento')
+   * @returns {Promise<number>} ID do medicamento inserido
+   *
+   * EXEMPLO DE USO:
+   * const id = await addMedicamento({
+   *   nome: 'Losartana 50mg',
+   *   dosagem: '50mg',
+   *   descricao: 'Para pressão alta',
+   *   fabricante: 'Genérico',
+   *   preco: 15.50,
+   *   categoria: 'Cardiovascular'
+   * });
+   */
   async addMedicamento(medicamento) {
     await this.ensureInitialized();
 
+    // Prepara os parâmetros com valores padrão
     const params = [
-      medicamento.nome,
-      medicamento.descricao || '',
-      medicamento.dosagem,
-      medicamento.fabricante || '',
-      medicamento.preco || 0,
-      medicamento.categoria || 'Medicamento'
+      medicamento.nome,                           // Nome (obrigatório)
+      medicamento.descricao || '',                // Descrição (padrão: vazio)
+      medicamento.dosagem,                        // Dosagem (obrigatório)
+      medicamento.fabricante || '',               // Fabricante (padrão: vazio)
+      medicamento.preco || 0,                     // Preço (padrão: 0)
+      medicamento.categoria || 'Medicamento'      // Categoria (padrão: 'Medicamento')
     ];
 
+    // Logs para debug (útil durante desenvolvimento)
     console.log('🔍 addMedicamento params:', params);
     console.log('🔍 addMedicamento types:', params.map(p => typeof p));
 
+    // Insere o medicamento no banco
     const result = await this.db.runAsync(
       'INSERT INTO medicamentos (nome, descricao, dosagem, fabricante, preco, categoria) VALUES (?, ?, ?, ?, ?, ?)',
       params
@@ -371,54 +515,118 @@ class DatabaseService {
 
     console.log('✅ Medicamento inserido com ID:', result.lastInsertRowId);
 
-    // Retorna apenas o ID, não busca o medicamento completo
+    // Retorna apenas o ID do medicamento inserido
     return result.lastInsertRowId;
   }
 
+  /**
+   * Atualiza um medicamento existente
+   *
+   * @param {number} id - ID do medicamento a atualizar
+   * @param {Object} dados - Campos a atualizar (apenas os campos fornecidos serão atualizados)
+   * @returns {Promise<Object>} Medicamento atualizado
+   *
+   * EXEMPLO DE USO:
+   * await updateMedicamento(1, {
+   *   nome: 'Losartana 100mg',
+   *   preco: 20.00
+   * });
+   *
+   * IMPORTANTE:
+   * - Atualiza apenas os campos fornecidos
+   * - Atualiza automaticamente o campo updated_at
+   */
   async updateMedicamento(id, dados) {
     await this.init();
-    const fields = [];
-    const values = [];
+    const fields = [];  // Array para armazenar "campo = ?"
+    const values = [];  // Array para armazenar os valores
 
+    // Constrói a query dinamicamente baseado nos campos fornecidos
     Object.keys(dados).forEach(key => {
-      fields.push(`${key} = ?`);
-      values.push(dados[key]);
+      fields.push(`${key} = ?`);  // Adiciona "campo = ?"
+      values.push(dados[key]);     // Adiciona o valor
     });
 
-    values.push(id);
+    values.push(id);  // Adiciona o ID no final (para o WHERE)
 
+    // Executa o UPDATE
     await this.db.runAsync(
       `UPDATE medicamentos SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
       values
     );
 
+    // Retorna o medicamento atualizado
     return await this.getMedicamentoById(id);
   }
 
+  /**
+   * Deleta um medicamento (soft delete)
+   *
+   * @param {number} id - ID do medicamento a deletar
+   * @returns {Promise<boolean>} true se deletado com sucesso
+   *
+   * IMPORTANTE:
+   * - Não deleta fisicamente do banco (soft delete)
+   * - Apenas marca como inativo (ativo = 0)
+   * - Permite recuperação futura se necessário
+   */
   async deleteMedicamento(id) {
     await this.init();
     await this.db.runAsync('UPDATE medicamentos SET ativo = 0 WHERE id = ?', [id]);
     return true;
   }
 
-  // ========== ESTOQUE ==========
+  // ========================================
+  // OPERAÇÕES COM ESTOQUE
+  // ========================================
 
+  /**
+   * Busca todo o estoque com informações dos medicamentos
+   *
+   * @returns {Promise<Array>} Array com estoque e nome dos medicamentos
+   *
+   * EXEMPLO DE RETORNO:
+   * [
+   *   { id: 1, medicamento_id: 1, quantidade: 30, medicamento: 'Losartana 50mg', ... },
+   *   { id: 2, medicamento_id: 2, quantidade: 5, medicamento: 'Metformina 850mg', ... }
+   * ]
+   *
+   * IMPORTANTE:
+   * - Usa INNER JOIN para pegar o nome do medicamento
+   * - Retorna apenas medicamentos ativos
+   */
   async getAllEstoque() {
     await this.init();
     return await this.db.getAllAsync(`
-      SELECT e.*, m.nome as medicamento 
-      FROM estoque e 
-      INNER JOIN medicamentos m ON e.medicamento_id = m.id 
+      SELECT e.*, m.nome as medicamento
+      FROM estoque e
+      INNER JOIN medicamentos m ON e.medicamento_id = m.id
       WHERE m.ativo = 1
       ORDER BY e.id
     `);
   }
 
+  /**
+   * Busca estoque por ID
+   *
+   * @param {number} id - ID do registro de estoque
+   * @returns {Promise<Object|null>} Registro de estoque ou null
+   */
   async getEstoqueById(id) {
     await this.init();
     return await this.db.getFirstAsync('SELECT * FROM estoque WHERE id = ?', [id]);
   }
 
+  /**
+   * Busca estoque por ID do medicamento
+   *
+   * @param {number} medicamentoId - ID do medicamento
+   * @returns {Promise<Object|null>} Registro de estoque ou null
+   *
+   * IMPORTANTE:
+   * - Cada medicamento tem apenas um registro de estoque
+   * - Usado para verificar quantidade disponível
+   */
   async getEstoqueByMedicamentoId(medicamentoId) {
     await this.init();
     return await this.db.getFirstAsync('SELECT * FROM estoque WHERE medicamento_id = ?', [medicamentoId]);
@@ -494,12 +702,22 @@ class DatabaseService {
     return await this.updateEstoque(estoque.id, dados);
   }
 
+  /**
+   * Adiciona quantidade ao estoque de um medicamento
+   *
+   * @param {number} medicamentoId - ID do medicamento
+   * @param {number} quantidade - Quantidade a adicionar
+   * @returns {Promise<Object|null>} Estoque atualizado ou null se não encontrado
+   *
+   * EXEMPLO DE USO:
+   * await adicionarQuantidade(1, 10); // Adiciona 10 unidades
+   */
   async adicionarQuantidade(medicamentoId, quantidade) {
     await this.init();
     const estoque = await this.getEstoqueByMedicamentoId(medicamentoId);
 
     if (!estoque) {
-      return null;
+      return null;  // Estoque não encontrado
     }
 
     const novaQuantidade = estoque.quantidade + quantidade;
@@ -511,12 +729,23 @@ class DatabaseService {
     return await this.getEstoqueByMedicamentoId(medicamentoId);
   }
 
+  /**
+   * Remove quantidade do estoque de um medicamento
+   *
+   * @param {number} medicamentoId - ID do medicamento
+   * @param {number} quantidade - Quantidade a remover
+   * @returns {Promise<Object|null>} Estoque atualizado ou null se não encontrado/quantidade insuficiente
+   *
+   * IMPORTANTE:
+   * - Verifica se há quantidade suficiente antes de remover
+   * - Retorna null se quantidade insuficiente
+   */
   async removerQuantidade(medicamentoId, quantidade) {
     await this.init();
     const estoque = await this.getEstoqueByMedicamentoId(medicamentoId);
 
     if (!estoque || estoque.quantidade < quantidade) {
-      return null;
+      return null;  // Estoque não encontrado ou quantidade insuficiente
     }
 
     const novaQuantidade = estoque.quantidade - quantidade;
@@ -528,13 +757,31 @@ class DatabaseService {
     return await this.getEstoqueByMedicamentoId(medicamentoId);
   }
 
-  // ========== MOVIMENTAÇÕES ==========
+  // ========================================
+  // OPERAÇÕES COM MOVIMENTAÇÕES
+  // ========================================
 
+  /**
+   * Busca todas as movimentações (histórico)
+   *
+   * @returns {Promise<Array>} Array com todas as movimentações ordenadas por data (mais recente primeiro)
+   */
   async getAllMovimentacoes() {
     await this.init();
     return await this.db.getAllAsync('SELECT * FROM movimentacoes ORDER BY data DESC, id DESC');
   }
 
+  /**
+   * Adiciona uma movimentação (entrada ou saída)
+   *
+   * @param {Object} movimentacao - Dados da movimentação
+   * @param {number} movimentacao.medicamento_id - ID do medicamento
+   * @param {string} movimentacao.tipo - Tipo: 'entrada' ou 'saida'
+   * @param {number} movimentacao.quantidade - Quantidade movimentada
+   * @param {string} movimentacao.data - Data da movimentação (formato: 'YYYY-MM-DD')
+   * @param {string} movimentacao.usuario - Usuário que fez a movimentação
+   * @param {string} movimentacao.motivo - Motivo da movimentação
+   */
   async addMovimentacao(movimentacao) {
     await this.init();
     await this.db.runAsync(
@@ -543,29 +790,60 @@ class DatabaseService {
     );
   }
 
-  // ========== ALERTAS ==========
+  // ========================================
+  // OPERAÇÕES COM ALERTAS
+  // ========================================
 
+  /**
+   * Busca todos os alertas
+   *
+   * @returns {Promise<Array>} Array com todos os alertas ordenados por data (mais recente primeiro)
+   */
   async getAllAlertas() {
     await this.init();
     return await this.db.getAllAsync('SELECT * FROM alertas ORDER BY data DESC, id DESC');
   }
 
+  /**
+   * Busca apenas alertas não lidos
+   *
+   * @returns {Promise<Array>} Array com alertas não lidos
+   */
   async getAlertasNaoLidos() {
     await this.init();
     return await this.db.getAllAsync('SELECT * FROM alertas WHERE lido = 0 ORDER BY data DESC');
   }
 
+  /**
+   * Marca um alerta como lido
+   *
+   * @param {number} id - ID do alerta
+   * @returns {Promise<Object>} Alerta atualizado
+   */
   async marcarAlertaComoLido(id) {
     await this.init();
     await this.db.runAsync('UPDATE alertas SET lido = 1 WHERE id = ?', [id]);
     return await this.db.getFirstAsync('SELECT * FROM alertas WHERE id = ?', [id]);
   }
 
+  /**
+   * Marca todos os alertas como lidos
+   */
   async marcarTodosAlertasComoLidos() {
     await this.init();
     await this.db.runAsync('UPDATE alertas SET lido = 1');
   }
 
+  /**
+   * Adiciona um novo alerta
+   *
+   * @param {Object} alerta - Dados do alerta
+   * @param {number} alerta.medicamento_id - ID do medicamento (pode ser null)
+   * @param {string} alerta.tipo - Tipo do alerta (ex: 'estoque_baixo', 'vencimento_proximo')
+   * @param {string} alerta.mensagem - Mensagem do alerta
+   * @param {string} alerta.data - Data do alerta
+   * @param {number} alerta.lido - 0 = não lido, 1 = lido (padrão: 0)
+   */
   async addAlerta(alerta) {
     await this.init();
     await this.db.runAsync(
@@ -574,9 +852,25 @@ class DatabaseService {
     );
   }
 
-  // ========== ALARMES ==========
+  // ========================================
+  // OPERAÇÕES COM ALARMES
+  // ========================================
 
-  // Função auxiliar para fazer parse seguro de dias_semana
+  /**
+   * Função auxiliar para fazer parse seguro de dias_semana
+   *
+   * FORMATOS ACEITOS:
+   * - Array: ["Seg", "Ter", "Qua"]
+   * - String JSON: '["Seg", "Ter", "Qua"]'
+   * - Objeto (antigo): {segunda: true, terca: true}
+   *
+   * @param {string|Array|Object} diasSemana - Dias da semana em qualquer formato
+   * @returns {Array} Array com dias da semana ["Seg", "Ter", ...]
+   *
+   * IMPORTANTE:
+   * - Converte automaticamente formato antigo para novo
+   * - Retorna array vazio em caso de erro
+   */
   _parseDiasSemana(diasSemana) {
     try {
       let parsed = diasSemana;

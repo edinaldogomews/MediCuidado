@@ -1,3 +1,34 @@
+// ========================================
+// TELA: CONFIGURAÇÕES
+// ========================================
+//
+// DESCRIÇÃO:
+// Tela de configurações do aplicativo.
+// Permite ajustar preferências e configurações do app.
+//
+// FUNCIONALIDADES:
+// - 🔔 Ativar/desativar notificações
+// - 🔊 Ativar/desativar som dos alarmes
+// - 🌙 Alternar entre tema claro/escuro
+// - 🔒 Configurar PIN de acesso (futuro)
+// - ☁️ Fazer backup dos dados (futuro)
+// - ℹ️ Ver informações sobre o app
+// - 🌓 Suporte a tema claro/escuro
+//
+// NAVEGAÇÃO:
+// - Vem de: HomeScreen (menu principal)
+// - Não navega para outras telas (por enquanto)
+//
+// PERMISSÕES:
+// - Cuidadores e idosos podem acessar
+// - Algumas configurações podem ser restritas no futuro
+//
+// IMPORTANTE:
+// - Configurações são salvas automaticamente
+// - Tema é persistido no AsyncStorage (via ThemeContext)
+// - Notificações e som são apenas estados locais (não persistidos ainda)
+// ========================================
+
 import React from 'react';
 import {
   View,
@@ -11,6 +42,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemePreference } from '../contexts/ThemeContext';
 
 const ConfiguracoesScreen = ({ navigation }) => {
+  // ========================================
+  // ESTADOS E CONTEXTOS
+  // ========================================
+
+  /**
+   * Função de navegação para voltar
+   * Tenta várias rotas possíveis para garantir navegação correta
+   */
   const handleBack = () => {
     if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
       navigation.goBack();
@@ -31,11 +70,26 @@ const ConfiguracoesScreen = ({ navigation }) => {
       return;
     }
   };
-  const [notificacoes, setNotificacoes] = React.useState(true);
-  const [somAlarme, setSomAlarme] = React.useState(true);
+
+  // Estados locais (não persistidos)
+  const [notificacoes, setNotificacoes] = React.useState(true);  // Ativar notificações
+  const [somAlarme, setSomAlarme] = React.useState(true);        // Ativar som dos alarmes
+
+  // Contexto de tema (persistido no AsyncStorage)
   const { themePreference, isDark, setThemePreference } = useThemePreference();
   const modoEscuro = themePreference === 'dark' || (themePreference === 'system' && isDark);
 
+  // ========================================
+  // CONFIGURAÇÕES DISPONÍVEIS
+  // ========================================
+
+  /**
+   * Lista de opções de configuração
+   *
+   * TIPOS:
+   * - 'switch': Opção com switch (liga/desliga)
+   * - 'navegacao': Opção que navega para outra tela
+   */
   const opcoes = [
     {
       titulo: 'Notificações',

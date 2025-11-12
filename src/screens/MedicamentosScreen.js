@@ -1,3 +1,32 @@
+// ========================================
+// TELA: MEDICAMENTOS
+// ========================================
+//
+// DESCRIÇÃO:
+// Tela principal de gerenciamento de medicamentos do cuidador.
+// Permite visualizar, buscar, filtrar, adicionar, editar e excluir medicamentos.
+//
+// FUNCIONALIDADES:
+// - 📋 Lista todos os medicamentos cadastrados
+// - 🔍 Busca por nome ou dosagem
+// - 🏷️ Filtro por categoria (Todos, Cardiovascular, Diabetes, etc.)
+// - ➕ Adicionar novo medicamento
+// - ✏️ Editar medicamento existente
+// - 🗑️ Excluir medicamento
+// - 📊 Exibe informações de estoque (quantidade, alertas)
+// - ⏰ Exibe horários de alarmes configurados
+// - 🔄 Atualização automática ao focar na tela
+// - 🌓 Suporte a tema claro/escuro
+//
+// NAVEGAÇÃO:
+// - Vem de: HomeScreen (menu principal)
+// - Vai para: AddMedicamentoScreen (adicionar), EditMedicamentoScreen (editar)
+//
+// PERMISSÕES:
+// - Apenas cuidadores podem acessar esta tela
+// - Idosos não têm acesso (usam CuidadoHomeScreen)
+// ========================================
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -16,17 +45,33 @@ import { useThemePreference } from '../contexts/ThemeContext';
 import databaseService from '../database/DatabaseService';
 
 const MedicamentosScreen = ({ navigation }) => {
+  // ========================================
+  // ESTADOS E CONTEXTOS
+  // ========================================
+
   const themeContext = useThemePreference();
   const isDark = themeContext?.isDark ?? false; // Proteção contra undefined
-  const [searchQuery, setSearchQuery] = useState('');
-  const [medicamentos, setMedicamentos] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState('');           // Texto da busca
+  const [medicamentos, setMedicamentos] = useState([]);         // Lista de medicamentos
+  const [isLoading, setIsLoading] = useState(false);            // Indicador de carregamento
   const [categoriaFiltro, setCategoriaFiltro] = useState('Todos'); // Filtro por categoria
 
+  // ========================================
+  // EFEITOS E CARREGAMENTO
+  // ========================================
+
+  /**
+   * Carrega medicamentos ao montar o componente
+   */
   useEffect(() => {
     carregarMedicamentos();
   }, []);
 
+  /**
+   * Recarrega medicamentos sempre que a tela recebe foco
+   * Útil para atualizar a lista após adicionar/editar medicamentos
+   */
   useFocusEffect(
     React.useCallback(() => {
       console.log('🔄 Tela de Medicamentos focada - Recarregando lista...');
@@ -34,6 +79,16 @@ const MedicamentosScreen = ({ navigation }) => {
     }, [])
   );
 
+  /**
+   * Carrega medicamentos do banco de dados
+   *
+   * PROCESSO:
+   * 1. Busca medicamentos completos (com estoque e alarmes)
+   * 2. Formata dados para exibição
+   * 3. Calcula status de estoque (zerado, baixo, normal)
+   * 4. Calcula intervalo entre horários de alarmes
+   * 5. Atualiza estado com lista formatada
+   */
   const carregarMedicamentos = async () => {
     // Evita múltiplas chamadas simultâneas
     if (isLoading) return;
@@ -44,20 +99,22 @@ const MedicamentosScreen = ({ navigation }) => {
       // Garante que o banco está inicializado
       await databaseService.ensureInitialized();
 
+      // Busca medicamentos com estoque e alarmes
       const medicamentosData = await databaseService.getMedicamentosCompletos();
 
       console.log(`📋 Carregados ${medicamentosData.length} medicamentos do banco`);
 
       // Formata os medicamentos para exibição
       const medicamentosFormatados = medicamentosData.map(med => {
+        // Extrai informações de estoque
         const estoque = med.estoque ? med.estoque.quantidade : 0;
         const estoqueMinimo = med.estoque ? med.estoque.minimo : 10;
         const alarmes = med.alarmes || [];
         const horarios = alarmes.map(a => a.horario);
 
-        // Verifica se o estoque está zerado ou baixo
-        const estoqueZerado = estoque === 0;
-        const estoqueBaixo = estoque > 0 && estoque <= estoqueMinimo;
+        // Verifica status do estoque
+        const estoqueZerado = estoque === 0;                      // Sem estoque
+        const estoqueBaixo = estoque > 0 && estoque <= estoqueMinimo; // Estoque baixo
 
         // Calcula o intervalo entre horários (se houver)
         let intervaloTexto = '';
@@ -73,6 +130,7 @@ const MedicamentosScreen = ({ navigation }) => {
           intervaloTexto = `1x ao dia (${horarios[0]})`;
         }
 
+        // Retorna medicamento formatado
         return {
           id: med.id,
           nome: med.nome,

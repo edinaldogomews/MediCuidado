@@ -1,3 +1,37 @@
+// ========================================
+// TELA: CUIDADO HOME (TELA DO IDOSO)
+// ========================================
+//
+// DESCRIÇÃO:
+// Tela principal para o usuário IDOSO.
+// Exibe os medicamentos que devem ser tomados hoje, organizados por horário.
+// Interface simplificada e amigável para facilitar o uso por idosos.
+//
+// FUNCIONALIDADES:
+// - 📅 Exibe medicamentos de HOJE (baseado no dia da semana)
+// - ⏰ Mostra horários de cada medicamento
+// - ✅ Permite marcar medicamento como tomado
+// - 🔄 Atualização automática ao focar na tela
+// - 📞 Botão de emergência (ligar para cuidador)
+// - 🚪 Botão de sair (voltar para seleção de usuário)
+// - 🌓 Suporte a tema claro/escuro
+// - 📱 Interface grande e legível (ideal para idosos)
+//
+// DIFERENÇAS DO HOMESCREEN (CUIDADOR):
+// - Não permite adicionar/editar/excluir medicamentos
+// - Foco em visualização e marcação de tomadas
+// - Interface mais simples e direta
+// - Botões maiores e mais espaçados
+//
+// NAVEGAÇÃO:
+// - Vem de: SelectUserTypeScreen (seleção de usuário)
+// - Não navega para outras telas (tela única para idoso)
+//
+// PERMISSÕES:
+// - Apenas idosos acessam esta tela
+// - Cuidadores usam HomeScreen
+// ========================================
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -16,21 +50,45 @@ import { useAuth } from '../contexts/AuthContext';
 import databaseService from '../database/DatabaseService';
 
 const CuidadoHomeScreen = ({ navigation }) => {
+  // ========================================
+  // ESTADOS E CONTEXTOS
+  // ========================================
+
   const themeContext = useThemePreference();
   const isDark = themeContext?.isDark ?? false;
   const { logout } = useAuth();
 
-  const [medicamentosHoje, setMedicamentosHoje] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [alarmesTomados, setAlarmesTomados] = useState([]);
+  const [medicamentosHoje, setMedicamentosHoje] = useState([]);  // Medicamentos de hoje
+  const [isLoading, setIsLoading] = useState(true);              // Indicador de carregamento
+  const [alarmesTomados, setAlarmesTomados] = useState([]);      // IDs dos alarmes já tomados
 
-  // Carregar alarmes do banco de dados
+  // ========================================
+  // FUNÇÕES DE CARREGAMENTO
+  // ========================================
+
+  /**
+   * Carrega alarmes do banco de dados e filtra os de hoje
+   *
+   * PROCESSO:
+   * 1. Busca todos os alarmes ativos do banco
+   * 2. Identifica o dia da semana atual
+   * 3. Filtra alarmes que devem tocar hoje
+   * 4. Busca informações do medicamento de cada alarme
+   * 5. Ordena por horário
+   * 6. Atualiza estado com lista de medicamentos de hoje
+   *
+   * IMPORTANTE:
+   * - Aceita dias_semana em formato array ou objeto (retrocompatibilidade)
+   * - Converte automaticamente formato antigo para novo
+   */
   const carregarAlarmes = async () => {
     try {
       setIsLoading(true);
+
+      // Busca todos os alarmes do banco
       const alarmes = await databaseService.getAllAlarmes();
 
-      // Filtrar alarmes de hoje
+      // Identifica o dia da semana atual
       const hoje = new Date().toLocaleDateString('pt-BR', { weekday: 'short' });
       const diasMap = {
         'seg.': 'Seg',
@@ -45,7 +103,9 @@ const CuidadoHomeScreen = ({ navigation }) => {
 
       const alarmesHoje = [];
 
+      // Processa cada alarme
       for (const alarme of alarmes) {
+        // Ignora alarmes inativos
         if (!alarme.ativo) continue;
 
         // Converte dias_semana para array (aceita objeto ou array)
@@ -55,9 +115,9 @@ const CuidadoHomeScreen = ({ navigation }) => {
           // Já é array: ["Seg", "Ter", ...]
           diasArray = alarme.dias_semana;
         } else if (typeof alarme.dias_semana === 'object' && alarme.dias_semana !== null) {
-          // É objeto: {segunda: true, terca: false, ...}
+          // É objeto (formato antigo): {segunda: true, terca: false, ...}
           // Converte para array
-          const diasMap = {
+          const diasMapConversao = {
             'segunda': 'Seg',
             'terca': 'Ter',
             'quarta': 'Qua',
@@ -68,18 +128,19 @@ const CuidadoHomeScreen = ({ navigation }) => {
           };
 
           diasArray = Object.keys(alarme.dias_semana)
-            .filter(dia => alarme.dias_semana[dia] === true)
-            .map(dia => diasMap[dia])
-            .filter(dia => dia !== undefined);
+            .filter(dia => alarme.dias_semana[dia] === true)  // Pega apenas dias marcados
+            .map(dia => diasMapConversao[dia])                // Converte para abreviação
+            .filter(dia => dia !== undefined);                // Remove valores inválidos
         }
 
-        // Verifica se hoje está nos dias
+        // Verifica se hoje está nos dias do alarme
         if (!diasArray.includes(diaHoje)) continue;
 
-        // Buscar medicamento
+        // Busca informações do medicamento
         const medicamento = await databaseService.getMedicamentoById(alarme.medicamento_id);
         if (!medicamento) continue;
 
+        // Adiciona à lista de alarmes de hoje
         alarmesHoje.push({
           id: alarme.id,
           nome: `${medicamento.nome} ${medicamento.dosagem}`,
@@ -88,7 +149,7 @@ const CuidadoHomeScreen = ({ navigation }) => {
         });
       }
 
-      // Ordenar por horário
+      // Ordena por horário (mais cedo primeiro)
       alarmesHoje.sort((a, b) => a.horario.localeCompare(b.horario));
 
       setMedicamentosHoje(alarmesHoje);

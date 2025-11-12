@@ -1,3 +1,35 @@
+// ========================================
+// TELA: HISTÓRICO DE MOVIMENTAÇÕES
+// ========================================
+//
+// DESCRIÇÃO:
+// Tela que exibe o histórico completo de movimentações de estoque.
+// Mostra todas as entradas e saídas de medicamentos com filtros.
+//
+// FUNCIONALIDADES:
+// - 📋 Lista todas as movimentações (entradas e saídas)
+// - 🔍 Filtro por tipo (todos, entrada, saída)
+// - 📅 Filtro por período (hoje, semana, mês, todos)
+// - 📊 Exibe informações detalhadas:
+//   - Nome do medicamento e dosagem
+//   - Tipo de movimentação (entrada/saída)
+//   - Quantidade movimentada
+//   - Data e horário
+//   - Usuário responsável
+//   - Motivo da movimentação
+// - 🔄 Atualização automática ao focar na tela
+// - 🌓 Suporte a tema claro/escuro
+// - 📱 Lista com scroll infinito
+//
+// NAVEGAÇÃO:
+// - Vem de: HomeScreen (menu principal)
+// - Não navega para outras telas
+//
+// PERMISSÕES:
+// - Cuidadores e idosos podem visualizar
+// - Apenas visualização (sem edição/exclusão)
+// ========================================
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -15,8 +47,17 @@ import { useThemePreference } from '../contexts/ThemeContext';
 import databaseService from '../database/DatabaseService';
 
 const HistoricoScreen = ({ navigation }) => {
+  // ========================================
+  // ESTADOS E CONTEXTOS
+  // ========================================
+
   const themeContext = useThemePreference();
   const isDark = themeContext?.isDark ?? false;
+
+  /**
+   * Função de navegação para voltar
+   * Tenta várias rotas possíveis para garantir navegação correta
+   */
   const handleBack = () => {
     if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
       navigation.goBack();
@@ -37,39 +78,64 @@ const HistoricoScreen = ({ navigation }) => {
       return;
     }
   };
-  const [filtroAtivo, setFiltroAtivo] = useState('todos');
-  const [filtroPeriodo, setFiltroPeriodo] = useState('todos'); // hoje, semana, mes, todos
-  const [historico, setHistorico] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
 
+  const [filtroAtivo, setFiltroAtivo] = useState('todos');        // Filtro: todos, entrada, saida
+  const [filtroPeriodo, setFiltroPeriodo] = useState('todos');    // Filtro: hoje, semana, mes, todos
+  const [historico, setHistorico] = useState([]);                 // Lista de movimentações
+  const [isLoading, setIsLoading] = useState(true);               // Indicador de carregamento
+
+  // ========================================
+  // EFEITOS E CARREGAMENTO
+  // ========================================
+
+  /**
+   * Carrega histórico ao montar o componente
+   */
   useEffect(() => {
     carregarHistorico();
   }, []);
 
+  /**
+   * Recarrega histórico sempre que a tela recebe foco
+   */
   useFocusEffect(
     React.useCallback(() => {
       carregarHistorico();
     }, [])
   );
 
+  /**
+   * Carrega histórico de movimentações do banco de dados
+   *
+   * PROCESSO:
+   * 1. Busca todas as movimentações do banco
+   * 2. Para cada movimentação, busca informações do medicamento
+   * 3. Formata dados para exibição
+   * 4. Ordena por data mais recente primeiro
+   * 5. Atualiza estado com lista formatada
+   */
   const carregarHistorico = async () => {
     try {
       setIsLoading(true);
+
+      // Busca todas as movimentações do banco
       const movimentacoes = await databaseService.getAllMovimentacoes();
 
       // Formata as movimentações para exibição
       const historicoFormatado = await Promise.all(movimentacoes.map(async (mov) => {
+        // Busca informações do medicamento
         const medicamento = await databaseService.getMedicamentoById(mov.medicamento_id);
+
         return {
           id: mov.id,
           medicamento: medicamento ? `${medicamento.nome} ${medicamento.dosagem}` : 'Medicamento não encontrado',
-          acao: mov.tipo, // 'entrada' ou 'saida'
-          data: mov.data,
-          dataObj: new Date(mov.data), // Para filtros
+          acao: mov.tipo,                    // 'entrada' ou 'saida'
+          data: mov.data,                    // Data da movimentação
+          dataObj: new Date(mov.data),       // Objeto Date para filtros
           horario: mov.created_at ? new Date(mov.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '',
-          quantidade: mov.quantidade,
-          usuario: mov.usuario || 'Usuário',
-          motivo: mov.motivo || ''
+          quantidade: mov.quantidade,        // Quantidade movimentada
+          usuario: mov.usuario || 'Usuário', // Usuário responsável
+          motivo: mov.motivo || ''           // Motivo da movimentação
         };
       }));
 
